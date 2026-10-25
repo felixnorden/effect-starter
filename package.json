@@ -1,0 +1,46 @@
+{
+  "name": "effect-starter",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Effect-first Bun monorepo: a shared Effect core and a replaceable hello example",
+  "license": "MIT",
+  "workspaces": [
+    "packages/*"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --filter '@effect-starter/app' dev",
+    "check": "oxlint . && oxfmt --check . && bun run --workspaces check:types && bun run test",
+    "check:types": "bun run --workspaces check:types",
+    "test": "bun run --workspaces --if-present test",
+    "patch:tsgo": "effect-tsgo patch --typescript --oxlint",
+    "postinstall": "bun run patch:tsgo",
+    "lint": "oxlint .",
+    "fmt": "oxfmt .",
+    "fmt:check": "oxfmt --check .",
+    "clean": "rm -rf packages/*/dist",
+    "skills:sync": "skills experimental_install -y",
+    "skills:check": "bun scripts/check-skills.mjs"
+  },
+  "devDependencies": {
+    "@effect/tsgo": "catalog:",
+    "effect": "catalog:",
+    "oxfmt": "0.74.0",
+    "oxlint": "1.89.0",
+    "oxlint-tsgolint": "7.0.2005",
+    "skills": "1.7.0",
+    "typescript": "catalog:"
+  },
+  "engines": {
+    "bun": ">=1.4.0",
+    "node": ">=22.20.0"
+  },
+  "packageManager": "bun@1.4.2",
+  "catalog": {
+    "@effect/tsgo": "0.57.0",
+    "@effect/vitest": "4.0.6",
+    "effect": "4.0.6",
+    "typescript": "7.0.2",
+    "vitest": "5.0.5"
+  }
+}

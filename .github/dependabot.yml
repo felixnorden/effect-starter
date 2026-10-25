@@ -1,0 +1,8 @@
+# Keeps the actions in .github/workflows/ current. Add an "npm" entry with
+# directory "/" if you also want dependency PRs against bun.lock.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
