@@ -40,7 +40,7 @@ work are still unbuilt.
 | Partial     | Code exists, but the requirement's own check is not met.               |
 | Not started | No implementation.                                                     |
 
-Commands: `bun run check` (199 core tests, 125 preview tests), `bun run check:a11y`
+Commands: `bun run check` (195 core tests, 125 preview tests), `bun run check:a11y`
 (8 browser specs, outside the gate), `bun run render fixtures/kitchen-sink.md`,
 `bun run bench`, `bunx playwright install chromium && bun run bench:browser`.
 
