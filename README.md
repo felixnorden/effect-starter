@@ -1,9 +1,11 @@
-# effect-starter
+# mdv
 
-An Effect-first Bun workspace. No framework, no server, no build step.
+A local Markdown viewer, built as an Effect-first Bun workspace. The renderer is
+a source-only core package; the app is a thin preview edge with a statically
+built React page.
 
-- `packages/core` — shared Effect service, typed error, tests. Source-only.
-- `packages/app` — hello Effect program. Replace it with your app.
+- `packages/core` — the renderer, the session, and the protocol. Source-only.
+- `packages/app` — file watch, the WebSocket server, and the rendered page.
 
 ## Start
 
@@ -13,42 +15,97 @@ Bun 1.4+ installs and runs the app. Node 22.20+ runs Vitest and the
 ```sh
 bun install
 bun run dev
-GREETING=Howdy bun run dev
+bun run preview fixtures/kitchen-sink.md
+bun run render fixtures/kitchen-sink.md
+bun run bench
+bun run fixtures:generate  # rewrites the committed large fixtures
 ```
 
-`bun run dev` runs `packages/app/src/main.ts` in watch mode. Scripts live in
-`package.json`; `bun run check` is the gate and covers types, lint, format, and
-tests. No account or env file is required.
+`bun run preview fixtures/kitchen-sink.md` renders the file, builds the page
+once when `packages/app/dist/client` is missing, serves it on an OS-assigned
+loopback port, prints the URL, and opens it. Saving the file patches the page.
+
+`bun run render` prints one Markdown file's document model, and `bun run bench`
+prints render timings for the fixtures. Scripts live in `package.json`;
+`bun run check` is the gate and covers types, lint, format, and tests. No account
+or env file is required.
+
+## Browser accessibility suite
+
+```sh
+bunx playwright install chromium
+bun run check:a11y   # axe, contrast, math console, and scroll/focus evidence
+```
+
+`check:a11y` builds the page and runs its own Playwright suite, so it sits
+outside `bun run check` and runs as its own `a11y` CI job. It prints the axe
+violations on the kitchen sink and the TOC fixture, the contrast ratio of every
+sampled text family in both themes, the math console and request result, and
+the scroll/focus result of an edit above the viewport.
+
+## Browser bench
+
+```sh
+bunx playwright install chromium
+bun run bench:browser                  # compare against the stored baseline
+BASELINE=write bun run bench:browser   # record a new baseline on this machine
+```
+
+`bench:browser` measures PF-3 (100 KB page paint), PF-4 (one-paragraph edit to
+the next paint), and PF-5 (1 MB paint and update), prints the p95 beside the
+baseline, and fails on a 20 % regression. It stays outside `bun run check`, and
+the stored baseline is per machine. PF-3 uses a warm browser, so its 2 s
+browser-launch clause is not measured.
+
+## Development
+
+The page is developed as two processes:
+
+```sh
+bun run dev         # app under watch on the fixed dev-only port 4317
+bun run dev:client  # Vite, proxying /ws and /local to 4317
+```
+
+Open Vite's URL. The fixed dev port is defined once in
+`packages/app/src/dev-config.ts`; `preview` never reads it. Development uses
+`fixtures/kitchen-sink.md` unless you edit the `dev` script.
 
 ## Layout
 
 ```txt
 packages/
 ├─ core/src/
-│  ├─ greeting.ts       # Greeting service, EmptyName, layers
-│  ├─ greeting.test.ts  # layer-backed tests
+│  ├─ model.ts          # block primitives
+│  ├─ render/           # options, blocks, sanitizer, Shiki, renderer
+│  ├─ session/          # block diff and the document session
+│  ├─ protocol.ts       # preview protocol v1
 │  └─ index.ts          # public surface
-└─ app/src/main.ts      # hello Effect program (replace me)
+└─ app/
+   ├─ src/main.ts       # CLI entrypoint
+   ├─ src/client/       # the React page
+   └─ vite.config.ts    # client build
 ```
 
 ## Replace the app
 
 `packages/app/src/main.ts` is a placeholder. Keep `effect`,
-`@effect-starter/core` as `workspace:*`, the `check:types` script, and the
+`@mdv/core` as `workspace:*`, the `check:types` script, and the
 package name (or update the root `dev` filter). Then change the entrypoint and
 the `dev` script. Add a `test` script if the replacement has tests; the root
 command picks it up.
 
 Hono, React, a Cloudflare Worker, or a CLI all work. Keep domain logic and
 config reads in core. If the replacement adds a build, add the package script, a
-root `build`, and a CI step together.
+root `build`, and a CI step together. `bun run build` writes
+`packages/app/dist/client`.
 
 ## Core example
 
-`packages/core/src/greeting.ts` shows the shape to copy: a `Context.Service` with
-a static `Layer`, config through Effect `Config`, an `EmptyName`
-`Schema.TaggedError`, and an `Effect.fn` method. `layerFromEnv` takes a record, so
-tests never read the real environment.
+`packages/core/src/render/renderer.ts` shows the shape to copy: a
+`Context.Service` with a static `Layer`, a `Schema.TaggedError` (`RenderError`),
+and an `Effect.fn` method with a trace span. `DocumentSession` shows the
+`Layer.succeed` variant. Tests build the same layer from a record, so they never
+read the real environment.
 
 Export new services from `src/index.ts` and test them with `layer()` from
 `@effect/vitest`. Read `node_modules/effect/AGENTS.md` before writing Effect
@@ -57,9 +114,9 @@ code.
 ## Tests
 
 `bun run test` runs every package with a `test` script and skips the rest. The
-core tests run on Node with Vitest. Bun runs the app. The suite uses `layer()`
-from `@effect/vitest`, which `bun:test` does not provide, so the test pool stays
-on Node. Keep `vitest.config.ts` plugin-free.
+core and app tests run on Node with Vitest; Bun runs the app itself. The suites
+use `layer()` from `@effect/vitest`, which `bun:test` does not provide, so the
+test pools stay on Node. Keep `vitest.config.ts` plugin-free in both packages.
 
 ## Task runner
 

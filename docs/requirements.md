@@ -1,0 +1,522 @@
+# Markdown Viewer requirements
+
+| Field    | Value                                                                    |
+| -------- | ------------------------------------------------------------------------ |
+| Status   | Draft 0.1 — single-file preview implemented; see Implementation status   |
+| Baseline | `iamcco/markdown-preview.nvim` at `a923f5f` (2023-10-17), release 0.0.10 |
+| Target   | v1.0, Neovim and Vim; other editors after v1.0                           |
+| Audience | Maintainers, build agents, issue authors                                 |
+
+**Normative words.** `M` means v1 is not done until the check passes. `S` means v1 should ship it; the team may defer it with a recorded decision. `C` means candidate for a later release. Each requirement has an ID. Issues must name the IDs they implement. Do not add behavior without a requirement ID.
+
+## 1. Product
+
+A local Markdown viewer for Neovim and Vim. It mirrors the active buffer in a browser, syncs preview scroll with the editor cursor, and exports the same rendering to PDF or HTML. It replaces `markdown-preview.nvim` with compatible commands and options, lower startup cost, and no Node, Yarn, or build step for users.
+
+One render pipeline serves preview, HTML export, and PDF export. Editor adapters are replaceable: the server and renderer expose one documented protocol, so a future editor adds an adapter, not a second renderer.
+
+**v1 success criteria.**
+
+1. A configuration that uses every documented `g:mkdp_*` option renders the baseline fixture with the same visible output.
+2. All `M` requirements pass their checks on macOS, Linux, and Windows.
+3. A clean install needs no Node, npm, Yarn, or Python.
+4. The performance budgets in section 4.9 pass on the reference machine.
+
+**Out of scope for v1.** Browser write-back to the buffer, a hosted or shared preview service, non-Markdown source formats, and a mobile layout. Other editors are out of scope for v1, but ED-13 keeps the protocol ready for them.
+
+## 1.1 Implementation status
+
+Updated 2026-10-25. This records the single-file live preview slice planned in
+`.qrspi/plans/20261025-feat-preview.md`. It is not the v1 release gate: the
+editor adapter, scroll sync, export, auth, packaging, and most accessibility
+work are still unbuilt.
+
+| Status      | Meaning                                                                |
+| ----------- | ---------------------------------------------------------------------- |
+| Done        | The requirement's check passes as written, or with a named assumption. |
+| Narrowed    | One clause is implemented; the rest is out of scope for this slice.    |
+| Measured    | The budget was measured, outside `bun run check`; no CI gate yet.      |
+| Miss        | Measured against the budget and failed; recorded as a finding.         |
+| Partial     | Code exists, but the requirement's own check is not met.               |
+| Not started | No implementation.                                                     |
+
+Commands: `bun run check` (199 core tests, 125 preview tests), `bun run check:a11y`
+(8 browser specs, outside the gate), `bun run render fixtures/kitchen-sink.md`,
+`bun run bench`, `bunx playwright install chromium && bun run bench:browser`.
+
+### Done
+
+| ID    | Implemented behavior                                                                       | Evidence                                                                                          |
+| ----- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| RD-1  | CommonMark and GFM tables, strikethrough, autolinks, and task lists render.                | `render/blocks.ts`, `render/__snapshots__/kitchen-sink.html`                                      |
+| RD-6  | All four TOC markers render one nav each, with the `tocListType` list and working anchors. | `render/toc.test.ts`, `render/blocks.test.ts`, `render-fidelity-toc.html`                         |
+| RD-7  | Emoji shortcodes, footnotes, definition lists, and `=WxH` image sizes render.              | `render/footnotes.test.ts`, `render/image-size.test.ts`, one `render-fidelity-extras.html` golden |
+| RD-9  | Front matter is parsed, hidden, and its `title` becomes the page title.                    | `render/front-matter.ts` and its tests                                                            |
+| RD-10 | Raw HTML renders after sanitization; scripts, handlers, `iframe`, and `object` go.         | `render/raw-html.ts` and its tests; both-origin table in `sanitize-policy.test.ts`                |
+| RD-12 | Every top-level block carries a 1-based inclusive source range.                            | `render/blocks.test.ts`; `math`, `toc`, and `footnote` range tests                                |
+| RD-13 | Only changed blocks are patched; unchanged blocks keep DOM identity.                       | `session/block-diff.ts`, `session/document-session.ts`, store tests                               |
+| TH-1  | Light and dark follow the system; the toggle persists for the page session.                | `client/theme.ts` and tests; manual Chromium check                                                |
+| TH-2  | All colors are CSS variables; a static scan rejects other color literals.                  | `client/styles.css`, `client/styles.test.ts`                                                      |
+| PT-1  | One WebSocket per page with a versioned handshake; a mismatch reports both versions.       | `protocol.test.ts`, `server.test.ts`                                                              |
+| PT-3  | Every document update carries a sequence number; stale updates are dropped.                | `client/store.test.ts`                                                                            |
+| PT-7  | At most one pending read; superseded content is dropped.                                   | `coalesce.ts` and its tests                                                                       |
+| PT-8  | The protocol is documented and pinned by golden frames.                                    | `docs/protocol.md`, `protocol.test.ts`                                                            |
+| AS-1  | Relative image paths resolve against the source file and map to `/local/...`.              | `client/hast.test.tsx`, `assets.test.ts`                                                          |
+| AS-2  | Served files stay inside allowed roots; traversal and symlink escape fail.                 | `assets.test.ts`, `server.test.ts`                                                                |
+| AS-6  | Links keep only `http`, `https`, `mailto`, and resolved local paths; hostile schemes drop. | `render/raw-html.test.ts`, `fixtures/hostile-links.md`                                            |
+| SE-3  | Rendered HTML is sanitized; a hostile fixture cannot execute script.                       | `render/raw-html.test.ts`, `render/sanitize-policy.test.ts`                                       |
+| AR-1  | One `h1`, a top-level banner, and source headings demoted below it.                        | `e2e-a11y/a11y.spec.ts`; accepted `heading-order` finding on the skipped-level fixture            |
+| AR-3  | Text contrast clears 4.5:1 in both themes, fence tokens included.                          | `src/contrast.test.ts`, `e2e-a11y/contrast.spec.ts` (smallest 4.73)                               |
+| RD-4  | Display and inline math plus mhchem render through KaTeX; malformed formulas stay visible. | `render/math.test.ts`, `render-fidelity-math.html`, `e2e-a11y/math.spec.ts` (no console errors)   |
+| RD-14 | A patch above the viewport keeps visible text and focus.                                   | `client/scroll.test.ts`, `e2e-a11y/scroll.spec.ts`                                                |
+| VF-7  | `bun run check` passes with one `bun.lock` and no npm, pnpm, or Yarn file.                 | `bun run check`, `bun install --frozen-lockfile`                                                  |
+| VF-9  | A schema edit without a protocol version bump fails the golden frames.                     | `protocol.test.ts`                                                                                |
+
+### Narrowed
+
+| ID    | Implemented clause                                                                                                                | Left out                                                          |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| RD-2  | `html`, `linkify`, and `breaks` options.                                                                                          | `typographer` is fixed; `quotes`, `xhtmlOut`, `langPrefix` absent |
+| RD-3  | Fenced code highlighted by language with light and dark themes.                                                                   | Line numbers and the copy button                                  |
+| RD-8  | Stable heading IDs with duplicate suffixes and in-page anchors.                                                                   | Copy-link affordance                                              |
+| RD-11 | Relative local images, `data:image/`, and `img` in raw HTML.                                                                      | Remote images and a configurable image root                       |
+| TH-3  | Light and dark code themes from shipped constants; page toggle switches them.                                                     | Theme-selector UI                                                 |
+| PT-2  | `ready`, `snapshot`, `patch`, `error`, `hello`, `ack`, `requestSnapshot`; new block kinds are additive, so no golden frame moved. | Cursor, options, theme, and export messages                       |
+| PT-4  | Content updates coalesce to one per 33 ms window.                                                                                 | Cursor-only updates                                               |
+| PF-4  | One-paragraph edit to the next paint.                                                                                             | Cursor-only update within 16 ms                                   |
+
+### Measured
+
+| ID    | Measured                                                               | Budget             | Verdict                                            |
+| ----- | ---------------------------------------------------------------------- | ------------------ | -------------------------------------------------- |
+| PF-3  | First paint 75 ms p95 with a warm browser (baseline 65 ms).            | 700 ms; 2 s launch | Pass for the warm clause; launch clause unmeasured |
+| PF-5  | 1 MB paint 368 ms p95; 1 MB update 47 ms p95.                          | 2500 ms; 250 ms    | Pass                                               |
+| PF-7  | Initial JS 95.3 KB gzip; CSS 8.7 KB gzip; total about 104 KB gzip.     | 200 KB; 500 KB     | Pass; KaTeX fonts are separate files               |
+| PF-10 | p95 within baseline × 1.2 in `bench:browser` on the recording machine. | baseline × 1.2     | Pass locally; no CI job                            |
+
+Reference fixture render medians: kitchen-sink 3.3 ms, 100 KB 19.0 ms, 1 MB
+143.7 ms. A 1 MB patch is 0.5 KB; its snapshot is 3.6 MB.
+
+Re-measured 2026-10-26 after the renderer-fidelity work (math, footnotes,
+definition lists, emoji, and the image rule now run on every parse):
+kitchen-sink 3.9–5.5 ms, 100 KB 20.6–26.2 ms, 1 MB 149.8–157.1 ms. The 1 MB row
+stays inside the 20 % tolerance; the kitchen-sink row's spread crosses it at the
+top of the range, which is recorded as a finding. Budgets are unchanged.
+
+### Miss
+
+| ID   | Measured                                                                                            | Budget | Result                                                            |
+| ---- | --------------------------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------- |
+| PF-6 | 297 MB RSS for one 1 MB render; 425 MB in the bench; `await import("effect")` alone is about 72 MB. | 60 MB  | Fail; recorded finding, budget unchanged. Idle CPU is unmeasured. |
+
+### Partial
+
+| ID   | Exists                                                                  | Missing                                              |
+| ---- | ----------------------------------------------------------------------- | ---------------------------------------------------- |
+| SE-6 | File roots enforced on the HTTP asset route.                            | Export and link resolution do not exist yet.         |
+| SE-7 | The browser opens with an argv list, never a shell string.              | File links do not open yet.                          |
+| VF-1 | Renderer, protocol codecs, and path resolution have unit tests.         | Config mapping and PDF options do not exist yet.     |
+| VF-3 | Playwright covers preview, edit, theme switch, and scroll preservation. | Scroll sync, reconnect, and export do not exist yet. |
+
+### Not started
+
+- **Editor integration:** ED-1 to ED-13, CF-1 to CF-7.
+- **Rendering:** RD-5 (diagrams), RD-15 (plugins).
+- **Scroll sync:** SS-1 to SS-9.
+- **Theming and export:** TH-4 to TH-9, EX-1 to EX-10.
+- **Assets and protocol:** AS-3, AS-4, AS-5, AS-7, PT-5, PT-6, PT-9, PT-10.
+- **Performance:** PF-1, PF-2, PF-8, PF-9.
+- **Security:** SE-1, SE-2, SE-4, SE-5, SE-8, SE-9, SE-10, SE-11.
+- **Packaging and accessibility:** OP-1 to OP-9, AR-2, AR-4, AR-5, AR-6.
+- **Verification:** VF-2, VF-4, VF-5, VF-6, VF-8.
+
+Recorded assumptions from this slice:
+
+- RD-1's "CommonMark 0.31" claim is unverified; the golden fixtures are the evidence.
+- Local SVG files download rather than render inline; `data:image/svg+xml` still renders.
+- No CSP header. Loopback binding and the served-file content policy are the only controls.
+- The 2 s browser-launch clause in PF-3 is unmeasured; the bench uses a warm browser.
+- `fs.watch` is verified on macOS only; directory watch, debounce, re-read, and hash filtering make event differences a latency cost, not a correctness one.
+- Cursor-only updates, theme selection, and browser history stay out of scope for this slice.
+
+## 2. Baseline analysis
+
+### 2.1 How markdown-preview.nvim works
+
+- `plugin/mkdp.vim` and `autoload/mkdp/*.vim` start a Node process from the editor over RPC (`autoload/mkdp/rpc.vim`).
+- Node attaches to the editor with `@chemzqm/neovim`, serves HTTP and Socket.IO, and relays buffer content (`src/attach/index.ts`, `app/server.js`).
+- The browser loads a static Next.js export and renders Markdown with `markdown-it` on the client (`app/pages/index.jsx`).
+- A refresh sends all buffer lines, the cursor, window height, theme, and options. The client parses and renders the whole document again (`app/pages/index.jsx`).
+- Scroll sync maps the cursor line to elements with `data-source-line` and animates the scroll position (`app/pages/linenumbers.js`, `app/pages/scroll.js`).
+- The repository contains about 6.9 MB of static assets in `app/_static` and 2.0 MB of Next.js output in `app/out` (`du -sh` at `a923f5f`).
+- Install downloads a prebuilt `pkg` binary from GitHub Releases (`app/install.sh`). Without that binary, install needs Node, Yarn, and a local build.
+
+### 2.2 Capability baseline
+
+| Area            | Baseline behavior                                                                                              | v1 target                                       |
+| --------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Editor commands | `:MarkdownPreview`, `:MarkdownPreviewStop`, `:MarkdownPreviewToggle`; `<Plug>` maps for normal and insert mode | Keep names and maps as compatibility aliases    |
+| Filetypes       | `g:mkdp_filetypes`, default `markdown`; optional global command                                                | Same, with typed validation                     |
+| Lifecycle       | Auto-start, auto-close on `BufHidden`, start on first use, stop on `VimLeave`                                  | Same, with no orphan processes                  |
+| Refresh         | Fast mode on `CursorHold`/`CursorMoved`; slow mode on write and insert leave                                   | Same triggers, coalesced and incremental        |
+| Multi-buffer    | One or more pages per buffer; optional combined preview tab                                                    | Same                                            |
+| Rendering       | `markdown-it` in the browser; HTML, linkify, typographer, breaks options                                       | Server-side render, React client                |
+| Highlighting    | `highlight.js`; one fixed CSS theme                                                                            | Selectable light and dark code themes           |
+| Math            | KaTeX 0.15.3 plus mhchem                                                                                       | KaTeX-compatible, bundled                       |
+| Diagrams        | PlantUML, Mermaid, Graphviz, Chart.js, js-sequence-diagrams, flowchart.js                                      | Same syntaxes; implementations may change       |
+| Markdown extras | GFM tables, task lists, footnotes, definition lists, emoji, anchors, TOC, image size syntax, YAML hiding       | Same                                            |
+| Assets          | Local images relative to buffer or `g:mkdp_images_path`; remote images                                         | Same, plus scoped file access                   |
+| Scroll sync     | Modes `middle`, `top`, `relative`; disable option                                                              | Same modes, lower latency, scroll-only updates  |
+| Theme           | System light/dark, manual header toggle, custom Markdown and highlight CSS                                     | Same, plus separate code themes and print theme |
+| Export          | None; no print stylesheet                                                                                      | PDF and HTML export from the same render        |
+| Server access   | Loopback by default; `0.0.0.0` opt-in with no authentication                                                   | Loopback default; token required when exposed   |
+| Distribution    | Prebuilt Node binary or Node + Yarn build                                                                      | Bun server, no Node requirement                 |
+
+### 2.3 Baseline limits
+
+| Limit                                           | Evidence                                                                     | v1 response                        |
+| ----------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------- |
+| Full document rerender on each cursor move      | `app/pages/index.jsx` calls `md.render` for every changed buffer             | RD-13, PF-4                        |
+| Scroll lag                                      | `README.md` FAQ recommends `updatetime=100`                                  | PF-4, SS-2                         |
+| Install failures dominate issue volume          | Open issues #188, #637, #690; closed #50, #558                               | OP-2, OP-3                         |
+| Export not supported                            | Open issues #87, #22; no print CSS in `app/_static`                          | EX-1 to EX-7                       |
+| Relative file links do not open                 | Open issues #58, #491, #492                                                  | AS-1, SS-7                         |
+| Browser history and reload are broken           | Open issue #614                                                              | SS-8                               |
+| PlantUML sends document text to a public server | `app/pages/plantuml.js` defaults to `plantuml.com`                           | SE-5                               |
+| Raw HTML is trusted                             | `app/pages/index.jsx` sets `html: true` and injects the result               | SE-3                               |
+| No authentication when exposed to the network   | `app/server.js` binds `0.0.0.0` and accepts any client when the option is on | SE-1, SE-2                         |
+| Styling lives in client code                    | CSS variables plus fixed vendor CSS in `app/_static`                         | TH-2, TH-3                         |
+| Plugin is unmaintained                          | Last commit 2023-10-17; issue #688                                           | Rebuild on maintained dependencies |
+
+## 3. Target architecture constraints
+
+```
+Editor adapter (Lua / Vimscript)
+        │  framed RPC over stdio or socket
+        ▼
+Bun session server  ──  Markdown parse + render model  ──  PDF exporter (headless browser)
+        │  WebSocket, JSON, versioned protocol
+        ▼
+React + Vite client (preview page)
+```
+
+- Use Bun for the server and build. Do not require Node at runtime.
+- Use React and Vite for the preview page. Keep the initial bundle small and lazy-load diagram engines.
+- Parse with `markdown-it` and the baseline plugin set, then convert tokens to a HAST tree with source ranges. Hide the parser behind a renderer interface.
+- Render math with KaTeX and code with Shiki on the server. Render diagrams in the client and lazy-load each engine. PDF export waits for the client ready signal.
+- Export PDF with an installed Chromium through CDP. Download `chrome-headless-shell` only when no browser exists.
+- Render once in TypeScript. Preview, HTML export, and PDF export consume the same render model.
+- Use one WebSocket per page for content, cursor, theme, and export messages.
+- Follow the repository rules in `AGENTS.md`: Effect services and typed errors in core packages, `Effect.provide` only at the app entrypoint, one Bun lockfile.
+
+The architecture is a constraint, not a requirement. If a requirement conflicts with it, the requirement wins and the architecture changes.
+
+## 4. Requirements
+
+### 4.1 Editor integration and lifecycle
+
+| ID    | Priority | Requirement                                                                                                                                               | Check                                                                             |
+| ----- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| ED-1  | M        | Provide `:MarkdownPreview`, `:MarkdownPreviewStop`, and `:MarkdownPreviewToggle` in configured filetypes, plus normal-mode and insert-mode `<Plug>` maps. | Open, stop, and toggle a preview from each mode.                                  |
+| ED-2  | M        | Read `filetypes` and a global-command option. Enable commands for every buffer when the global option is on.                                              | Start on `markdown` and on a non-Markdown buffer with the option on.              |
+| ED-3  | S        | Start the preview when a configured filetype opens, when auto-start is on.                                                                                | Open a fixture with auto-start on; one page opens.                                |
+| ED-4  | S        | Close the page when its buffer is hidden, when auto-close is on. Keep other sessions alive.                                                               | Hide one buffer; only its page closes.                                            |
+| ED-5  | M        | Support fast refresh (cursor hold and cursor move, coalesced) and slow refresh (`BufWrite` and `InsertLeave`).                                            | Edit in each mode; assert the update count and final content.                     |
+| ED-6  | M        | Keep one preview session per buffer. Two buffers render independent content and scroll state.                                                             | Open two files; edit each; no cross-updates.                                      |
+| ED-7  | S        | Support combined preview: one tab follows the active Markdown buffer, with optional refresh on buffer switch.                                             | Switch buffers; the tab changes content and title.                                |
+| ED-8  | M        | Open the page with the default browser, a named browser, or a user function. Support URL echo, custom host/IP, custom port, and network exposure.         | Exercise each opener on macOS, Linux, and Windows.                                |
+| ED-9  | M        | Start the server on first preview. Stop it on `VimLeave` or explicit stop. Leave no orphan process.                                                       | Quit the editor; assert the process is gone.                                      |
+| ED-10 | M        | Restore a page after reload or reconnect with current content, cursor position, theme, and options.                                                       | Reload the tab; content and scroll match the editor.                              |
+| ED-11 | S        | Provide `:checkhealth` output for server path and version, Bun version, protocol version, browser opener, port, and the fix for each failure.             | Run `:checkhealth markdown-viewer` with and without a server.                     |
+| ED-12 | M        | Keep the editor responsive. A failed start shows an actionable message and does not block editing.                                                        | Kill the server binary; start preview; editor still responds and shows the cause. |
+| ED-13 | S        | Document the session protocol so a new editor adapter needs no server or renderer change.                                                                 | Build a test adapter that opens a page and sends a cursor update.                 |
+
+### 4.2 Rendering
+
+| ID    | Priority | Requirement                                                                                                                                                                                                                                                                                                                                                                                              | Check                                                                                                 |
+| ----- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| RD-1  | M        | Parse CommonMark 0.31 and GFM tables, strikethrough, autolinks, and task lists.                                                                                                                                                                                                                                                                                                                          | Golden fixtures for CommonMark and GFM examples.                                                      |
+| RD-2  | M        | Honor the `render.markdown_it` option object, including `html`, `breaks`, `linkify`, `typographer`, `quotes`, `xhtmlOut`, and `langPrefix`.                                                                                                                                                                                                                                                              | Snapshot each option on and off.                                                                      |
+| RD-3  | M        | Highlight fenced code by language, with selectable light and dark code themes, optional line numbers, and a copy button.                                                                                                                                                                                                                                                                                 | Render one fixture in each theme; copy puts exact code on the clipboard.                              |
+| RD-4  | M        | Render inline `$...$` and block `$$...$$` math and mhchem notation.                                                                                                                                                                                                                                                                                                                                      | Math fixture matches KaTeX output; no console errors.                                                 |
+| RD-5  | M        | Render `mermaid`, `plantuml`, `dot`/`graphviz`, `chart`, `sequence-diagrams`, and `flowchart` fences, `@startuml`/`@enduml` blocks, and Mermaid blocks detected by their first line (`gantt`, `sequenceDiagram`, `erDiagram`, `graph ...`). Use Mermaid 12. Translate `sequence-diagrams` and `flowchart` to Mermaid; if a construct cannot be translated, render the source block with a visible error. | One fixture per syntax renders or falls back with a visible error.                                    |
+| RD-6  | M        | Render a table of contents from `${toc}`, `[[toc]]`, `[toc]`, or `[[_toc_]]`, with list type option.                                                                                                                                                                                                                                                                                                     | Each marker produces one TOC with working anchors.                                                    |
+| RD-7  | M        | Render emoji shortcodes, footnotes, definition lists, and `=WxH` image sizes.                                                                                                                                                                                                                                                                                                                            | Golden fixture per feature.                                                                           |
+| RD-8  | S        | Add stable heading IDs and a copy-link affordance. Duplicate headings get unique IDs.                                                                                                                                                                                                                                                                                                                    | Two headings with the same text get different IDs; links resolve.                                     |
+| RD-9  | M        | Parse and hide YAML front matter by default. Use its `title` for the page title when no explicit page title is set.                                                                                                                                                                                                                                                                                      | Fixture with front matter shows no metadata block and uses the title.                                 |
+| RD-10 | M        | Render raw HTML when enabled, after sanitization. Never execute document scripts.                                                                                                                                                                                                                                                                                                                        | Script and event-handler fixture is neutralized; HTML still renders.                                  |
+| RD-11 | M        | Render local images relative to the buffer, custom image root images, remote images, data URLs, and `img` tags inside raw HTML.                                                                                                                                                                                                                                                                          | Image fixture renders on all three OSes.                                                              |
+| RD-12 | M        | Attach a source line range to every rendered block.                                                                                                                                                                                                                                                                                                                                                      | Every top-level block has a range that maps to the source.                                            |
+| RD-13 | M        | Update changed blocks only. Keep DOM identity for unchanged blocks and rerun math or diagram rendering only for changed sources.                                                                                                                                                                                                                                                                         | Edit one paragraph in a 2,000-line fixture; assert one block updates and diagram nodes keep identity. |
+| RD-14 | S        | Preserve scroll position and focused element across content updates.                                                                                                                                                                                                                                                                                                                                     | Edit above the viewport; visible text does not jump.                                                  |
+| RD-15 | C        | Support additional syntaxes through plugins with a documented plugin interface.                                                                                                                                                                                                                                                                                                                          | Load a test plugin that adds one fence renderer.                                                      |
+
+### 4.3 Scroll sync and navigation
+
+| ID   | Priority | Requirement                                                                                                                           | Check                                                                                     |
+| ---- | -------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| SS-1 | M        | Move the preview to the block that contains the editor cursor. Support `middle`, `top`, and `relative` modes.                         | Cursor fixture at 20 positions; each mode places the mapped block at the expected offset. |
+| SS-2 | M        | A cursor move that does not change content must send cursor state only and must not parse or patch the document.                      | Instrument the server; a cursor move produces zero render calls.                          |
+| SS-3 | M        | Disable animation when the user requests reduced motion or turns smooth scrolling off.                                                | Emulate `prefers-reduced-motion`; scroll position changes in one step.                    |
+| SS-4 | S        | Pause sync while the user scrolls the preview, then resume on the next editor cursor move.                                            | Scroll the page by hand; it stays put until the cursor moves.                             |
+| SS-5 | C        | Click a preview block to move the editor cursor to its first source line.                                                             | Click a paragraph; editor cursor moves to that line.                                      |
+| SS-6 | M        | Anchor links scroll within the page. External links open the default browser.                                                         | Click one internal and one external link.                                                 |
+| SS-7 | S        | Local Markdown links open the target file in the editor, optionally in a new preview. Relative paths resolve against the source file. | Click `doc.md`; the editor opens that file.                                               |
+| SS-8 | S        | Reload and browser back/forward restore the same session page.                                                                        | Reload and navigate back; the same buffer renders.                                        |
+| SS-9 | M        | Keep the nearest visible block stable when content above the viewport changes.                                                        | Insert 20 lines above the viewport; visible text stays in place.                          |
+
+### 4.4 Theming and appearance
+
+| ID   | Priority | Requirement                                                                                                                                                     | Check                                                                                          |
+| ---- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| TH-1 | M        | Support light and dark themes. Follow the system preference by default. A manual toggle persists for the page session.                                          | Toggle on a system-dark machine; reload restores the chosen theme.                             |
+| TH-2 | M        | Define all theme colors as CSS variables. Components consume variables and define no color literals.                                                            | Static check finds no hex or named colors outside theme files.                                 |
+| TH-3 | M        | Select the code block theme for light and dark independently.                                                                                                   | Set different themes; a fenced block uses the selected theme in each mode.                     |
+| TH-4 | M        | Load custom Markdown CSS and code CSS from absolute paths and apply changes without restarting the server.                                                      | Point at a custom file, edit it, reload; the new rule applies.                                 |
+| TH-5 | M        | Render the file name header and the page title template with `${name}` substitution. Support hiding the header.                                                 | Fixture with a custom template and header off.                                                 |
+| TH-6 | S        | Allow a configurable content width and font size.                                                                                                               | Set both; computed layout matches the values.                                                  |
+| TH-7 | M        | Provide a print stylesheet for PDF export: page size, margins, no header or toggle controls, page breaks that avoid splitting code blocks, tables, and figures. | Export a fixture with long code and tables; no block splits across pages unless it cannot fit. |
+| TH-8 | C        | Support `forced-colors` and high-contrast mode.                                                                                                                 | Windows high-contrast check on text and borders.                                               |
+| TH-9 | S        | Load the stored theme before first paint. No flash of the wrong theme.                                                                                          | Hard reload 20 times; no theme flash in a screen recording.                                    |
+
+### 4.5 Export
+
+| ID    | Priority | Requirement                                                                                                                         | Check                                                                       |
+| ----- | -------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| EX-1  | M        | Provide `:MarkdownExport` with a path and format. Default to PDF next to the source file. Provide an explicit HTML format.          | Export with no arguments and with an explicit `.pdf` and `.html` path.      |
+| EX-2  | M        | Render PDF from the same render model and theme as the preview, with a headless browser and no visible window.                      | Compare PDF page text and styles with the preview fixture.                  |
+| EX-3  | M        | Support page size, margins, orientation, theme, code theme, TOC, header, and footer options.                                        | Export the matrix of page sizes and themes; page boxes match.               |
+| EX-4  | M        | Wait for math, diagrams, images, and fonts before capture. Fail with the asset path when a required asset fails.                    | Use a missing image and a slow diagram; assert the error names the asset.   |
+| EX-5  | S        | Produce a reproducible layout for the same input and options. Add no timestamp unless the footer requests one.                      | Export twice; extracted text and page count match.                          |
+| EX-6  | M        | Export without an open preview tab. Use a transient session that closes after export.                                               | Export in a fresh editor; no tab remains and no server leaks.               |
+| EX-7  | S        | Export HTML as one self-contained file with inline CSS and data-URI images, or as a directory with assets. Preserve relative links. | Open the file from `file://`; styles, images, and links work.               |
+| EX-8  | C        | Batch export multiple files with a glob.                                                                                            | Export a directory of three Markdown files.                                 |
+| EX-9  | S        | Report progress and allow cancellation. Never freeze the editor during export.                                                      | Cancel a large export; editor stays responsive and no partial file remains. |
+| EX-10 | C        | Add link target URLs to print output when the option is on.                                                                         | PDF shows the URL after each external link.                                 |
+
+### 4.6 Assets, links, and file access
+
+| ID   | Priority | Requirement                                                                                                                                                | Check                                                                                         |
+| ---- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| AS-1 | M        | Resolve relative image and link paths against the buffer directory. Use the custom image root when set.                                                    | Fixture in a nested directory resolves `../img/a.png`.                                        |
+| AS-2 | M        | Serve local files only from allowed roots: buffer directory, workspace root, image root, and explicit allowlist. Reject `..` traversal and symlink escape. | Requests for `/etc/passwd`, `../../secret`, and a symlink outside the root return 403 or 404. |
+| AS-3 | M        | Allow remote images by default. Provide an option to block all remote requests.                                                                            | Block mode renders placeholders and makes no network requests.                                |
+| AS-4 | S        | Open non-image file links in the OS default application or the editor. Display PDFs in the browser.                                                        | Open a `.pdf` and a `.txt` link from the preview.                                             |
+| AS-5 | S        | Show a placeholder with the resolved path for a missing asset. Keep the layout intact.                                                                     | Remove an image; placeholder shows the path.                                                  |
+| AS-6 | M        | Allow only `http`, `https`, `mailto`, and resolved local paths. Block `javascript:` and unsafe `data:` links.                                              | Link fixture with hostile schemes renders inert links.                                        |
+| AS-7 | C        | Cache remote images for offline preview and export.                                                                                                        | Disconnect the network; a previously loaded image still renders.                              |
+
+### 4.7 Protocol and transport
+
+| ID    | Priority | Requirement                                                                                                                                       | Check                                                                  |
+| ----- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| PT-1  | M        | Use one WebSocket per page with JSON messages and a versioned handshake. A version mismatch shows a clear error.                                  | Connect a client with the wrong version; the page names both versions. |
+| PT-2  | M        | Define server messages for snapshot, patch, cursor, options, theme, and error. Define client messages for ready, scroll, link, export, and theme. | Protocol schema test covers every message type.                        |
+| PT-3  | M        | Attach a sequence number to each document update. Drop stale updates.                                                                             | Reorder two updates in a test; the page keeps the newer one.           |
+| PT-4  | M        | Coalesce content updates to at most one per 33 ms. Send cursor-only updates when content is unchanged.                                            | Burst of 100 edits produces at most 3 content messages.                |
+| PT-5  | M        | Require an unguessable session token on HTTP and WebSocket routes. Validate the `Origin` header. Bind to loopback by default.                     | Request without a token gets 401; foreign origin gets 403.             |
+| PT-6  | M        | Reconnect with backoff and request a full snapshot after reconnect.                                                                               | Kill and restart the server; the page recovers without reload.         |
+| PT-7  | S        | Bound the update queue. Drop superseded content updates instead of growing memory.                                                                | Send 1,000 updates while the client is paused; queue stays bounded.    |
+| PT-8  | M        | Document the protocol and keep conformance tests for every message.                                                                               | A second client implementation passes the conformance suite.           |
+| PT-9  | M        | Frame the editor-to-server RPC and version it. Write logs to a file, never to the protocol stream.                                                | Server logs do not corrupt RPC; version mismatch reports cleanly.      |
+| PT-10 | S        | If the configured port is busy, try the next free port and report the chosen port.                                                                | Occupy the default port; preview still starts.                         |
+
+### 4.8 Configuration and compatibility
+
+| ID   | Priority | Requirement                                                                                                                               | Check                                                             |
+| ---- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| CF-1 | M        | Accept every `g:mkdp_*` option in section 5 with the same meaning and default.                                                            | Migration test sets every option and compares the render.         |
+| CF-2 | M        | Keep the baseline command names and `<Plug>` maps as aliases for at least one major version. Warn once per session when an alias is used. | Use only baseline commands; one deprecation notice appears.       |
+| CF-3 | M        | Accept the nested `g:mkdp_preview_options` keys. Unknown keys produce a warning, not a failure.                                           | Set an unknown key; preview starts and warns.                     |
+| CF-4 | M        | Validate configuration against a typed schema. An error names the key, the expected value, the received value, and the source.            | Invalid `sync_scroll_type` reports all four fields.               |
+| CF-5 | M        | Read a Lua `setup()` table in Neovim and `g:` variables in Vim into one normalized configuration.                                         | Same settings from both forms produce the same normalized object. |
+| CF-6 | S        | Apply live-safe changes (theme, CSS paths, scroll mode) without reopening the preview.                                                    | Change theme and CSS while a page is open; both apply.            |
+| CF-7 | C        | Detect the baseline plugin in the same runtime path and stop with a clear conflict message.                                               | Load both plugins; error names both directories.                  |
+
+### 4.9 Performance
+
+Reference machine: Apple M1, 8 GB RAM, Chrome 120 or newer, warm cache. Reference document: 100 KB, 2,000 lines, 20 code blocks, 5 diagrams, 10 images. Measure p95 over 20 runs. Record the machine in the benchmark output.
+
+| ID    | Priority | Budget                                                                                                                                                    | Check                                                                                           |
+| ----- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| PF-1  | M        | The plugin adds at most 10 ms to editor startup and starts no process until the first preview command.                                                    | Measure `nvim --startuptime` with and without the plugin; no server process before the command. |
+| PF-2  | M        | Server start to listening takes at most 300 ms p95.                                                                                                       | Timestamp the spawn and the listening event.                                                    |
+| PF-3  | M        | First preview paint takes at most 700 ms p95 with a warm browser, and at most 2 s including browser launch.                                               | Playwright marks the first contentful paint from the command timestamp.                         |
+| PF-4  | M        | An edit shows in the preview within 100 ms p95 end to end. A cursor-only update takes at most 16 ms.                                                      | Type in a fixture; measure the last WebSocket message to the next paint.                        |
+| PF-5  | M        | A 1 MB document paints within 2.5 s and updates within 250 ms p95.                                                                                        | Run the large fixture through PF-3 and PF-4.                                                    |
+| PF-6  | M        | Idle CPU is at most 1% on average. Server RSS is at most 60 MB. A 100 KB page uses at most 150 MB JS heap.                                                | Sample after 10 s idle with one page.                                                           |
+| PF-7  | M        | Initial route JavaScript is at most 200 KB gzip. Total initial transfer is at most 500 KB gzip, excluding fonts. Math and diagram engines load on demand. | Build report and network waterfall.                                                             |
+| PF-8  | M        | PDF export takes at most 3 s p95 for 100 KB and at most 15 s for 1 MB.                                                                                    | Export fixture with diagrams and fonts.                                                         |
+| PF-9  | M        | After 1,000 edits, server and page memory stay within 10% of the post-load value.                                                                         | Heap snapshots before and after the edit loop.                                                  |
+| PF-10 | M        | The benchmark job fails on a 20% regression in PF-2 through PF-8.                                                                                         | Benchmark CI run with the stored baseline.                                                      |
+
+### 4.10 Security and privacy
+
+| ID    | Priority | Requirement                                                                                                                                      | Check                                                                    |
+| ----- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| SE-1  | M        | Bind to `127.0.0.1` by default. Network exposure is opt-in and requires the session token.                                                       | Scan listening sockets with exposure off and on.                         |
+| SE-2  | M        | Put an unguessable token in the page URL. Reject HTTP and WebSocket requests without the token. Validate `Origin`.                               | Unauthenticated and cross-origin requests fail.                          |
+| SE-3  | M        | Sanitize rendered HTML. Remove scripts, event handlers, `iframe`, and `object` by default.                                                       | Hostile fixture cannot execute script or load an iframe.                 |
+| SE-4  | M        | Bundle all JavaScript, CSS, and fonts. Load no remote code, use no CDN, and send no telemetry.                                                   | Network log during preview shows only local requests and allowed images. |
+| SE-5  | M        | Do not send document content to a remote service by default. PlantUML uses a local renderer or an explicit opt-in remote server, with a warning. | Default PlantUML fixture makes no external request.                      |
+| SE-6  | M        | Enforce the file access roots in AS-2 for HTTP, export, and link resolution.                                                                     | Path traversal suite returns no file outside the roots.                  |
+| SE-7  | M        | Open browsers and files with an argument vector, not a shell string. Document content never reaches a shell.                                     | Inject shell metacharacters into a path; no command runs.                |
+| SE-8  | M        | Keep document content out of logs by default. Cap and rotate log files.                                                                          | Grep logs after a fixture session; no fixture text appears.              |
+| SE-9  | M        | Send a Content Security Policy that allows only the page origin, bundled assets, and allowed image sources.                                      | CSP header test; an injected inline script is blocked.                   |
+| SE-10 | S        | Keep `content_editable` opt-in and display-only. It never writes to the buffer.                                                                  | Edit in the page; the buffer does not change.                            |
+| SE-11 | M        | Run a dependency audit and license check in CI. Fail on a known critical vulnerability.                                                          | Audit job with a seeded vulnerability fails.                             |
+
+### 4.11 Portability, packaging, and operations
+
+| ID   | Priority | Requirement                                                                                                                                                                           | Check                                                                                                   |
+| ---- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| OP-1 | M        | Support macOS arm64 and x64, Linux x64 and arm64, and Windows x64. Support WSL and remote SSH sessions.                                                                               | Install and preview on each target.                                                                     |
+| OP-2 | M        | Require no Node, npm, Yarn, or Python at runtime. Ship or run the server with Bun.                                                                                                    | Clean VM install with none of those tools present.                                                      |
+| OP-3 | M        | Install with one command. Verify the download checksum. Require matching plugin and server protocol versions.                                                                         | Tampered download fails; mismatched versions report the fix.                                            |
+| OP-4 | M        | Preview and PDF export work offline after install. Remote images are the only network dependency.                                                                                     | Disconnect the network; run preview and export.                                                         |
+| OP-5 | M        | State the minimum Neovim and Vim versions in the README and `:checkhealth`.                                                                                                           | Version check on the oldest supported release.                                                          |
+| OP-6 | M        | Run one server process per editor. Two editors can preview at the same time without port or state conflicts.                                                                          | Start two editors; both previews work.                                                                  |
+| OP-7 | S        | Store logs and cache under the platform cache directory. Rotate logs and remove them on uninstall.                                                                                    | Uninstall leaves no files outside the plugin directory.                                                 |
+| OP-8 | S        | Stop child processes and close pages on uninstall, upgrade, and crash.                                                                                                                | Kill the editor with SIGKILL; helper processes exit.                                                    |
+| OP-9 | M        | Keep the PDF engine off the preview install path. Use an installed browser when possible; otherwise download the engine on first export with a checksum, progress, and a size prompt. | Install preview without a PDF engine; first export on a machine without a browser asks before download. |
+
+### 4.12 Accessibility and UX
+
+| ID   | Priority | Requirement                                                                                  | Check                                                              |
+| ---- | -------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| AR-1 | M        | Emit semantic HTML with one `h1`, landmarks, and heading order that follows the source.      | axe-core reports no structural violation.                          |
+| AR-2 | M        | Make links, TOC entries, and the theme control keyboard reachable with a visible focus ring. | Tab through the page; every control is reachable and visible.      |
+| AR-3 | M        | Keep text contrast at 4.5:1 or better in both themes.                                        | Contrast check on body, muted text, and code.                      |
+| AR-4 | M        | Respect `prefers-reduced-motion` for scroll and diagram animation.                           | Reduced-motion emulation disables animation.                       |
+| AR-5 | S        | Allow 200% zoom without horizontal scrolling at the default width.                           | Browser zoom test at 200%.                                         |
+| AR-6 | M        | Show a readable error page with cause and fix when the server cannot load a page.            | Stop the server; the page shows the cause and the restart command. |
+
+### 4.13 Verification
+
+| ID   | Priority | Requirement                                                                                            | Check                                                  |
+| ---- | -------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| VF-1 | M        | Unit-test the renderer, config mapping, protocol codecs, path resolution, and PDF options.             | Coverage report lists each module.                     |
+| VF-2 | M        | Integration-test the editor adapter against a fake editor RPC and each server lifecycle path.          | Test suite runs without a real editor.                 |
+| VF-3 | M        | End-to-end test preview, edit, scroll sync, theme switch, reconnect, and export with Playwright.       | CI job passes on the reference fixtures.               |
+| VF-4 | M        | PDF regression test checks page count, extracted text, and an image diff with a set threshold.         | Fixture mismatch fails the job.                        |
+| VF-5 | M        | Run the performance benchmark in CI and store results for PF-10.                                       | Benchmark job publishes a report.                      |
+| VF-6 | S        | Run the end-to-end suite on macOS, Linux, and Windows.                                                 | Matrix job passes on all three.                        |
+| VF-7 | M        | `bun run check` passes with no new lockfile and no npm, pnpm, or Yarn artifact.                        | Root gate passes in CI.                                |
+| VF-8 | M        | Migration corpus renders the baseline README, baseline `test/test.md`, and a fixture for every option. | Visual and text comparison passes.                     |
+| VF-9 | M        | Protocol conformance suite covers the documented messages and the version handshake.                   | Suite fails on a schema change without a version bump. |
+
+## 5. Configuration mapping
+
+Working names: new settings live in a Lua `setup()` table for Neovim and `g:markdown_viewer_*` variables for Vim. The final namespace is OD-1. The `mkdp` names remain accepted under CF-1 and CF-3.
+
+### 5.1 Top-level options
+
+| Baseline                              | New key                        | Default        | Notes                         |
+| ------------------------------------- | ------------------------------ | -------------- | ----------------------------- |
+| `g:mkdp_auto_start`                   | `preview.auto_start`           | `false`        |                               |
+| `g:mkdp_auto_close`                   | `preview.auto_close`           | `true`         |                               |
+| `g:mkdp_refresh_slow`                 | `preview.refresh_slow`         | `false`        |                               |
+| `g:mkdp_command_for_global`           | `preview.command_for_global`   | `false`        |                               |
+| `g:mkdp_open_to_the_world`            | `server.open_to_the_world`     | `false`        | Requires the token from SE-1. |
+| `g:mkdp_open_ip`                      | `server.open_ip`               | `""`           |                               |
+| `g:mkdp_echo_preview_url`             | `server.echo_url`              | `false`        |                               |
+| `g:mkdp_browserfunc`                  | `browser.open_function`        | `nil`          | Receives the URL.             |
+| `g:mkdp_browser`                      | `browser.name`                 | `nil`          |                               |
+| `g:mkdp_preview_options`              | `preview.options`              | `{}`           | Nested keys in section 5.2.   |
+| `g:mkdp_port`                         | `server.port`                  | `nil`          | Random free port when unset.  |
+| `g:mkdp_page_title`                   | `preview.page_title`           | `「${name}」`  |                               |
+| `g:mkdp_images_path`                  | `assets.image_root`            | `nil`          |                               |
+| `g:mkdp_filetypes`                    | `preview.filetypes`            | `{"markdown"}` |                               |
+| `g:mkdp_theme`                        | `theme.mode`                   | `"system"`     | Baseline empty means system.  |
+| `g:mkdp_markdown_css`                 | `theme.markdown_css`           | `nil`          | Absolute path.                |
+| `g:mkdp_highlight_css`                | `theme.code_css`               | `nil`          | Absolute path.                |
+| `g:mkdp_combine_preview`              | `preview.combine`              | `false`        |                               |
+| `g:mkdp_combine_preview_auto_refresh` | `preview.combine_auto_refresh` | `true`         |                               |
+
+### 5.2 `g:mkdp_preview_options` keys
+
+| Baseline key          | New key                    | Default    | Notes                                       |
+| --------------------- | -------------------------- | ---------- | ------------------------------------------- |
+| `mkit`                | `render.markdown_it`       | `{}`       | Option names stay `markdown-it` compatible. |
+| `katex`               | `render.katex`             | `{}`       |                                             |
+| `uml`                 | `render.plantuml`          | `{}`       | `server` remains a supported key.           |
+| `maid`                | `render.mermaid`           | `{}`       |                                             |
+| `toc`                 | `render.toc`               | `{}`       |                                             |
+| `hide_yaml_meta`      | `render.hide_front_matter` | `true`     |                                             |
+| `disable_sync_scroll` | `scroll.enabled`           | `true`     | Inverted.                                   |
+| `sync_scroll_type`    | `scroll.mode`              | `"middle"` | `middle`, `top`, `relative`.                |
+| `sequence_diagrams`   | `render.sequence_diagrams` | `{}`       |                                             |
+| `flowchart_diagrams`  | `render.flowchart`         | `{}`       |                                             |
+| `content_editable`    | `preview.content_editable` | `false`    | See SE-10.                                  |
+| `disable_filename`    | `preview.show_filename`    | `true`     | Inverted.                                   |
+
+### 5.3 New settings
+
+| Key                   | Default         | Requirement |
+| --------------------- | --------------- | ----------- |
+| `theme.code_light`    | bundled default | TH-3        |
+| `theme.code_dark`     | bundled default | TH-3        |
+| `theme.print`         | `"light"`       | TH-7        |
+| `preview.width`       | `"900px"`       | TH-6        |
+| `export.format`       | `"pdf"`         | EX-1        |
+| `export.page_size`    | `"A4"`          | EX-3        |
+| `export.margins`      | `"20mm"`        | EX-3        |
+| `export.header`       | `true`          | EX-3        |
+| `export.footer`       | `false`         | EX-3        |
+| `export.toc`          | `false`         | EX-3        |
+| `assets.allow_remote` | `true`          | AS-3        |
+| `assets.allowlist`    | `[]`            | AS-2        |
+| `security.allow_html` | `true`          | RD-10       |
+| `logging.level`       | `"warn"`        | SE-8        |
+
+## 6. Release gate for v1
+
+- Every `M` requirement has a passing automated check, or a recorded manual check with evidence.
+- The migration corpus from VF-8 renders at feature parity on a baseline configuration.
+- A clean install succeeds on macOS, Linux, and Windows with no Node, Yarn, or Python.
+- Preview installs without the PDF engine, and the first export downloads it only after a prompt.
+- Preview and PDF export work offline.
+- All performance budgets in section 4.9 pass on the reference machine.
+- The security tests for SE-1, SE-2, SE-3, and SE-6 pass.
+- `bun run check` passes.
+- The README documents install, commands, migration, and the open decisions that affect users.
+
+## 7. Decisions
+
+Resolved decisions are binding for v1. To change one, add a new decision ID and update this table. Deferred decisions do not block the renderer.
+
+| ID    | Status   | Decision                           | Options                                                                            | Current choice or default                                                                                                |
+| ----- | -------- | ---------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| OD-1  | Open     | Project, command, and config names | Keep the `mkdp` namespace for a drop-in replacement, or use new names with aliases | Keep baseline commands; use a `markdown_viewer` config namespace with `mkdp` aliases                                     |
+| OD-2  | Deferred | Neovim adapter language            | Lua only, or Lua for Neovim plus Vimscript for Vim                                 | Lua for Neovim, a thin Vimscript adapter for Vim                                                                         |
+| OD-3  | Deferred | Distribution                       | Compiled Bun binary per platform, require Bun, or bundle a JS server               | Compile per platform and fall back to a local Bun                                                                        |
+| OD-4  | Resolved | PDF engine                         | Headless Chromium, Typst, or WeasyPrint                                            | Installed Chromium through CDP; download `chrome-headless-shell` only when none exists                                   |
+| OD-5  | Resolved | Render location                    | Bun-side render to HAST/HTML, or client-side render                                | Bun parses and renders HAST; React hydrates and patches                                                                  |
+| OD-6  | Deferred | Bidirectional navigation           | Ship click-to-editor in v1 or later                                                | Later; reserve protocol messages                                                                                         |
+| OD-7  | Resolved | Deprecated diagram libraries       | Replace Chart.js 2, js-sequence-diagrams, and flowchart.js, or drop their syntaxes | All six; Mermaid 12; translate `sequence-diagrams` and `flowchart` to Mermaid; source fallback on unsupported constructs |
+| OD-8  | Deferred | Minimum editor versions            | Vim 8.1 versus 8.2; Neovim 0.9 versus 0.10                                         | Vim 8.2; Neovim 0.10                                                                                                     |
+| OD-9  | Resolved | `content_editable`                 | Keep display-only or add buffer write-back                                         | Display-only                                                                                                             |
+| OD-10 | Resolved | PlantUML rendering                 | Local server, WASM renderer, or opt-in remote                                      | Opt-in remote with a first-use warning                                                                                   |
+| OD-11 | Resolved | Canonical parser and render tree   | markdown-it tokens to HAST, micromark/mdast to HAST, or a Bun.markdown hybrid      | markdown-it tokens to HAST                                                                                               |
+| OD-12 | Resolved | Client payload                     | HAST tree, block HTML, or raw parser tokens                                        | HAST tree rendered by React                                                                                              |
+| OD-13 | Resolved | Incremental update model           | Full parse with block hashes, incremental parse, or no block diff                  | Full parse; send changed top-level blocks; no content on cursor-only moves                                               |
+| OD-14 | Resolved | Feature render location            | Server for math and code, client for diagrams; all client; or all server           | KaTeX and Shiki on the server; diagrams in the client; PDF waits for client-ready                                        |
+
+## 8. Issue seeds
+
+Create one epic per row. Issues inside an epic name the requirement IDs they close.
+
+| Epic                 | Scope                                                                   | Requirements                |
+| -------------------- | ----------------------------------------------------------------------- | --------------------------- |
+| EP-01 Foundation     | Workspace packages, Bun server skeleton, React and Vite page, root gate | OP-2, VF-7                  |
+| EP-02 Protocol       | WebSocket messages, versioning, token auth, reconnect                   | PT-1 to PT-10, SE-1, SE-2   |
+| EP-03 Renderer       | CommonMark, GFM, highlight, math, diagrams, TOC, assets                 | RD-1 to RD-15               |
+| EP-04 Editor adapter | Commands, maps, lifecycle, config, health                               | ED-1 to ED-13, CF-1 to CF-7 |
+| EP-05 Preview client | Page shell, themes, header, errors, accessibility                       | TH-1 to TH-9, AR-1 to AR-6  |
+| EP-06 Scroll sync    | Line mapping, modes, coalescing, reduced motion                         | SS-1 to SS-9, PF-4          |
+| EP-07 Export         | PDF and HTML export, print CSS, progress                                | EX-1 to EX-10, TH-7         |
+| EP-08 Assets         | Local roots, path safety, links, remote policy                          | AS-1 to AS-7, SE-6          |
+| EP-09 Packaging      | Per-platform builds, install, checksums, offline, PDF engine delivery   | OP-1 to OP-9, SE-11         |
+| EP-10 Performance    | Benchmarks, budgets, CI gate                                            | PF-1 to PF-10, VF-5         |
+| EP-11 Verification   | Unit, integration, E2E, PDF, migration corpus                           | VF-1 to VF-9                |
+| EP-12 Migration      | Baseline option mapping, aliases, deprecation                           | CF-1 to CF-7, VF-8          |
