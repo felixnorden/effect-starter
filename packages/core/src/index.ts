@@ -1,4 +1,3 @@
-export * from "./greeting.ts";
 export * from "./protocol.ts";
 export * from "./model.ts";
 export * from "./render/document.ts";

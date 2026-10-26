@@ -5,7 +5,6 @@ and tests, and it has no framework or runtime dependency.
 
 ```txt
 src/
-├─ greeting.ts          # Greeting service, EmptyName error, layers
 ├─ model.ts             # BlockId, BlockKind, LineRange schemas
 ├─ render/
 │  ├─ options.ts        # render options and the canonical options hash
@@ -31,9 +30,9 @@ src/
 
 ## What belongs here
 
-- **Domain services.** `Greeting` is the worked example: a `Context.Service`
-  with a static `Layer`, a config read through Effect `Config`, and a typed
-  error raised with `yield*`.
+- **Domain services.** `Renderer` and `DocumentSession` are the worked
+  examples: a `Context.Service` with a static `Layer`, a typed error raised with
+  `yield*`, and an `Effect.fn` method with a trace span.
 - **Rules the app must not reimplement.** If two packages need the same check,
   it belongs here.
 - **Schemas for boundaries.** Add a `Schema.Class` when a service takes or
@@ -46,10 +45,11 @@ runtime dependencies. No `node:fs`, no server, no UI. The
 only I/O is a dynamic import of a bundled Shiki grammar or theme. A module here
 must run under Bun and under vitest unchanged.
 
-`greeting.ts` demonstrates the pattern: a `Context.Service` with a static
-`Layer`, a config read through Effect `Config`, a typed error raised with
-`yield*`, and an `Effect.fn` method with a trace span. The tests build the same
-layer from a record, so they never read the real environment.
+`render/renderer.ts` demonstrates the pattern: a `Context.Service` with a static
+`Layer`, a typed error raised with `yield*`, and an `Effect.fn` method with a
+trace span. `session/document-session.ts` shows the `Layer.succeed` variant. The
+tests build the same layer from a record, so they never read the real
+environment.
 
 The root [`README.md`](../../README.md) has the pattern table.
 
@@ -60,7 +60,7 @@ there is no build step. Bun strips the types when it loads the package, and a
 bundler would do the same.
 
 ```ts
-import { Greeting } from "@mdv/core";
+import { Renderer, DocumentSession } from "@mdv/core";
 ```
 
 Each consumer adds the package with `workspace:*`.
