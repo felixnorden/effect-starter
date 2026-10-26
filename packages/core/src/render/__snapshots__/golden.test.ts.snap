@@ -1,0 +1,374 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`renderer fidelity goldens > pins the four block models together 1`] = `
+[
+  {
+    "blocks": [
+      {
+        "hash": "67c77fb527df8d7d",
+        "kind": "frontMatter",
+        "range": {
+          "endLine": 3,
+          "startLine": 1,
+        },
+      },
+      {
+        "hash": "4cbf26ec1613fa6f",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 5,
+          "startLine": 5,
+        },
+      },
+      {
+        "hash": "3be6b3c64c7d688b",
+        "kind": "math",
+        "range": {
+          "endLine": 9,
+          "startLine": 7,
+        },
+      },
+      {
+        "hash": "24026ab48649fbb7",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 11,
+          "startLine": 11,
+        },
+      },
+      {
+        "hash": "3e69debeedb95b9e",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 13,
+          "startLine": 13,
+        },
+      },
+      {
+        "hash": "bf1f1641d6710e7f",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 15,
+          "startLine": 15,
+        },
+      },
+      {
+        "hash": "6641f013e0f017bb",
+        "kind": "table",
+        "range": {
+          "endLine": 19,
+          "startLine": 17,
+        },
+      },
+      {
+        "hash": "600714c48dc6cd4f",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 22,
+          "startLine": 21,
+        },
+      },
+      {
+        "hash": "9af9aecfddf2dd22",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 24,
+          "startLine": 24,
+        },
+      },
+      {
+        "hash": "4a07a6b1a050a640",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 26,
+          "startLine": 26,
+        },
+      },
+      {
+        "hash": "449bb6e2f7bc6a80",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 28,
+          "startLine": 28,
+        },
+      },
+      {
+        "hash": "4de4b80701e68f6b",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 30,
+          "startLine": 30,
+        },
+      },
+    ],
+    "optionsHash": "44d825b43a7474f9",
+    "title": "Math Fidelity",
+  },
+  {
+    "blocks": [
+      {
+        "hash": "67c77fb527df8d7d",
+        "kind": "frontMatter",
+        "range": {
+          "endLine": 3,
+          "startLine": 1,
+        },
+      },
+      {
+        "hash": "9f5e4500479e1719",
+        "kind": "toc",
+        "range": {
+          "endLine": 5,
+          "startLine": 5,
+        },
+      },
+      {
+        "hash": "481288de8d36f6db",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 7,
+          "startLine": 7,
+        },
+      },
+      {
+        "hash": "3f0fd7f1511f31a7",
+        "kind": "toc",
+        "range": {
+          "endLine": 9,
+          "startLine": 9,
+        },
+      },
+      {
+        "hash": "142ab3ff100f6687",
+        "kind": "toc",
+        "range": {
+          "endLine": 11,
+          "startLine": 11,
+        },
+      },
+      {
+        "hash": "87aea6116dc4cdf1",
+        "kind": "toc",
+        "range": {
+          "endLine": 13,
+          "startLine": 13,
+        },
+      },
+      {
+        "hash": "d5863342fe36cdea",
+        "kind": "heading",
+        "range": {
+          "endLine": 15,
+          "startLine": 15,
+        },
+      },
+      {
+        "hash": "8d51f199c95fcd16",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 17,
+          "startLine": 17,
+        },
+      },
+      {
+        "hash": "b9a9366ba42db7db",
+        "kind": "heading",
+        "range": {
+          "endLine": 19,
+          "startLine": 19,
+        },
+      },
+      {
+        "hash": "50c9aa80bc96d8a9",
+        "kind": "heading",
+        "range": {
+          "endLine": 21,
+          "startLine": 21,
+        },
+      },
+      {
+        "hash": "13f47b29a08ddfcd",
+        "kind": "heading",
+        "range": {
+          "endLine": 23,
+          "startLine": 23,
+        },
+      },
+      {
+        "hash": "f4ac369e922b70f0",
+        "kind": "blockquote",
+        "range": {
+          "endLine": 25,
+          "startLine": 25,
+        },
+      },
+      {
+        "hash": "81b5d8904f4884a8",
+        "kind": "heading",
+        "range": {
+          "endLine": 27,
+          "startLine": 27,
+        },
+      },
+      {
+        "hash": "edac7ac3508326a5",
+        "kind": "heading",
+        "range": {
+          "endLine": 29,
+          "startLine": 29,
+        },
+      },
+    ],
+    "optionsHash": "44d825b43a7474f9",
+    "title": "Table of Contents Fidelity",
+  },
+  {
+    "blocks": [
+      {
+        "hash": "67c77fb527df8d7d",
+        "kind": "frontMatter",
+        "range": {
+          "endLine": 3,
+          "startLine": 1,
+        },
+      },
+      {
+        "hash": "841949a3dcd4b1fc",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 5,
+          "startLine": 5,
+        },
+      },
+      {
+        "hash": "3f5ac5df610acbf4",
+        "kind": "list",
+        "range": {
+          "endLine": 16,
+          "startLine": 11,
+        },
+      },
+      {
+        "hash": "d5f2f714543e14d1",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 17,
+          "startLine": 17,
+        },
+      },
+      {
+        "hash": "71ed3ff7a673d6d7",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 19,
+          "startLine": 19,
+        },
+      },
+      {
+        "hash": "dd85d7d981cad41f",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 21,
+          "startLine": 21,
+        },
+      },
+      {
+        "hash": "7bea87e4435ce472",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 23,
+          "startLine": 23,
+        },
+      },
+      {
+        "hash": "8e9bfbfb8835e1fa",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 25,
+          "startLine": 25,
+        },
+      },
+      {
+        "hash": "8219529dde17f182",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 27,
+          "startLine": 27,
+        },
+      },
+      {
+        "hash": "1f58e54425400e93",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 29,
+          "startLine": 29,
+        },
+      },
+      {
+        "hash": "3cff52934a738b9c",
+        "kind": "footnote",
+        "range": {
+          "endLine": 9,
+          "startLine": 7,
+        },
+      },
+    ],
+    "optionsHash": "44d825b43a7474f9",
+    "title": "Extras Fidelity",
+  },
+  {
+    "blocks": [
+      {
+        "hash": "134af4b59adb2020",
+        "kind": "heading",
+        "range": {
+          "endLine": 1,
+          "startLine": 1,
+        },
+      },
+      {
+        "hash": "244c16d6559900e1",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 3,
+          "startLine": 3,
+        },
+      },
+      {
+        "hash": "d0549d9fc13d3da6",
+        "kind": "heading",
+        "range": {
+          "endLine": 5,
+          "startLine": 5,
+        },
+      },
+      {
+        "hash": "bdc45ca4b365ac15",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 7,
+          "startLine": 7,
+        },
+      },
+      {
+        "hash": "772f5dc05c86ec79",
+        "kind": "heading",
+        "range": {
+          "endLine": 9,
+          "startLine": 9,
+        },
+      },
+      {
+        "hash": "092702bf19b7148a",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 11,
+          "startLine": 11,
+        },
+      },
+    ],
+    "optionsHash": "44d825b43a7474f9",
+    "title": null,
+  },
+]
+`;
