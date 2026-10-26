@@ -31,7 +31,34 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
+      # The page must build before the gate exercises the app.
+      - name: Build
+        run: bun run build
+
       # No credential is needed: the starter runs TypeScript on Bun and has no
       # deploy step. `check` covers types, lint, format, and tests.
       - name: Check
         run: bun run check
+
+  # The browser suite stays outside `bun run check`: it needs Chromium, and its
+  # evidence is measured rather than asserted by the gate.
+  a11y:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - run: bun install --frozen-lockfile
+
+      - name: Install Chromium
+        run: bunx playwright install --with-deps chromium
+
+      - name: Accessibility suite
+        run: bun run check:a11y

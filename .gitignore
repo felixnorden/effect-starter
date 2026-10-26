@@ -59,9 +59,18 @@ dist
 # Coverage directory used by tools like istanbul
 coverage
 
+# Playwright
+playwright-report
+blob-report
+test-results
+
 # Temporary files
 *.tmp
 *.temp
 
 # AI
 .agents
+.qrspi
+.pi
+
+.worktrees
