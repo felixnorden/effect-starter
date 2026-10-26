@@ -1,20 +1,41 @@
 {
-  "name": "@effect-starter/app",
+  "name": "@mdv/preview",
   "version": "0.0.0",
   "private": true,
-  "description": "Hello Effect example; replace this package with your main app",
+  "description": "The preview app: file watch, WebSocket server, and the rendered page",
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "bun --watch src/main.ts",
-    "check:types": "tsc --noEmit"
+    "dev": "bun --watch src/main.ts dev ../../fixtures/kitchen-sink.md",
+    "dev:client": "vite",
+    "render": "bun src/main.ts render",
+    "bench": "bun src/bench.ts",
+    "build": "vite build",
+    "check:types": "tsc --noEmit",
+    "test": "vitest run",
+    "preview": "bun src/main.ts preview",
+    "bench:browser": "vite build && playwright test",
+    "check:a11y": "vite build && playwright test -c playwright.a11y.config.ts"
   },
   "dependencies": {
-    "@effect-starter/core": "workspace:*",
+    "@mdv/core": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@axe-core/playwright": "catalog:",
     "@effect/tsgo": "catalog:",
-    "typescript": "catalog:"
+    "@effect/vitest": "catalog:",
+    "@playwright/test": "catalog:",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "katex": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
   }
 }
