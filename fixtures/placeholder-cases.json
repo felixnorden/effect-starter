@@ -1,0 +1,36 @@
+{
+  "marker": { "property": "dataMdvPlaceholder", "attribute": "data-mdv-placeholder" },
+  "authoredSource": { "property": "dataMdvSource", "attribute": "data-mdv-source" },
+  "resolvedPath": { "property": "dataMdvResolved", "attribute": "data-mdv-resolved" },
+  "accessibleName": { "property": "ariaLabel", "attribute": "aria-label", "role": "img" },
+  "box": { "property": "style", "attribute": "style", "numeric": "px", "other": "verbatim" },
+  "cases": [
+    {
+      "producer": "core",
+      "source": "/no/such/root/a.png",
+      "resolved": "/no/such/root/a.png",
+      "alt": "diagram",
+      "width": "120",
+      "height": "80",
+      "expect": { "width": "120px", "height": "80px" }
+    },
+    {
+      "producer": "core",
+      "source": "/no/such/root/b.png",
+      "resolved": "/no/such/root/b.png",
+      "alt": "",
+      "width": "50%",
+      "height": "auto",
+      "expect": { "width": "50%", "height": "auto" }
+    },
+    {
+      "producer": "client",
+      "source": "images/p.png",
+      "resolved": "/local/images/p.png",
+      "alt": "diagram",
+      "width": "120",
+      "height": "80",
+      "expect": { "width": "120px", "height": "80px" }
+    }
+  ]
+}

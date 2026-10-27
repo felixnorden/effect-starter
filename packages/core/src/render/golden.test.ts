@@ -10,7 +10,21 @@ import { defaultRenderOptions } from "./options.ts";
 import { Renderer } from "./renderer.ts";
 import { documentToHtml } from "./to-html.ts";
 
-const FIXTURE_NAMES = ["math", "toc", "extras", "heading-structure"] as const;
+const FIXTURE_NAMES = [
+  "math",
+  "toc",
+  "extras",
+  "heading-structure",
+  "images-root",
+  "images-remote",
+  "images-data",
+  "images-raw-img",
+  "images-missing",
+  "images-blocked",
+  "images-unresolvable",
+  "nested/images-relative",
+  "themes",
+] as const;
 
 const fixtureOf = (name: string): string =>
   readFileSync(new URL(`../../../../fixtures/render-fidelity/${name}.md`, import.meta.url), "utf8");
@@ -42,12 +56,12 @@ describe("renderer fidelity goldens", () => {
       const document = await render(fixtureOf(name));
 
       await expect(documentToHtml(document)).toMatchFileSnapshot(
-        `__snapshots__/render-fidelity-${name}.html`,
+        `__snapshots__/render-fidelity-${name.replaceAll("/", "-")}.html`,
       );
     });
   }
 
-  it("pins the four block models together", async () => {
+  it("pins the block models together", async () => {
     const documents = await Promise.all(FIXTURE_NAMES.map((name) => render(fixtureOf(name))));
 
     expect(documents.map(modelOf)).toMatchSnapshot();

@@ -1,5 +1,6 @@
 export * from "./protocol.ts";
 export * from "./model.ts";
+export * from "./render/assets.ts";
 export * from "./render/document.ts";
 export * from "./render/highlight.ts";
 export * from "./render/options.ts";

@@ -1,0 +1,51 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`option markup > changes markup when breaks changes 1`] = `
+{
+  "off": "<p>A soft break ends this line.
+The next line follows it.</p>
+<p>A hard break ends this line.<br>
+The next line follows it.</p>",
+  "on": "<p>A soft break ends this line.<br>
+The next line follows it.</p>
+<p>A hard break ends this line.<br>
+The next line follows it.</p>",
+}
+`;
+
+exports[`option markup > changes markup when html changes 1`] = `
+{
+  "off": "<p>A raw block follows.</p>
+<p>&#x3C;div class="box">raw block&#x3C;/div></p>
+<p>Inline &#x3C;b>bold&#x3C;/b> HTML stays raw.</p>",
+  "on": "<p>A raw block follows.</p>
+<div>raw block</div>
+
+<p>Inline <b>bold</b> HTML stays raw.</p>",
+}
+`;
+
+exports[`option markup > changes markup when linkify changes 1`] = `
+{
+  "off": "<p>A bare URL: https://example.com/path</p>
+<p>A plain word stays plain.</p>",
+  "on": "<p>A bare URL: <a href="https://example.com/path">https://example.com/path</a></p>
+<p>A plain word stays plain.</p>",
+}
+`;
+
+exports[`typographer and quotes > maps all to the four characters and any four-unit value verbatim 1`] = `
+{
+  "all": "<p>“Double quotes” and ‘single quotes’ sit in one paragraph.</p>",
+  "custom": "<p>«Double quotes» and „single quotes‚ sit in one paragraph.</p>",
+}
+`;
+
+exports[`typographer and quotes > renders typographic replacements only when typographer is on 1`] = `
+{
+  "off": "<p>Dashes -- and --- , an ellipsis ... , and (c) 2026.</p>
+<p>"Double quotes" and 'single quotes' take replacements too.</p>",
+  "on": "<p>Dashes – and — , an ellipsis … , and © 2026.</p>
+<p>“Double quotes” and ‘single quotes’ take replacements too.</p>",
+}
+`;

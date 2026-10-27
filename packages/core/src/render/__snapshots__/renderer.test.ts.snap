@@ -3,7 +3,7 @@
 exports[`kitchen-sink snapshot > pins the blocks and the rendered HTML 1`] = `
 [
   {
-    "hash": "67c77fb527df8d7d",
+    "hash": "06323e6b2ab88268",
     "hast": [],
     "kind": "frontMatter",
     "range": {
@@ -12,7 +12,7 @@ exports[`kitchen-sink snapshot > pins the blocks and the rendered HTML 1`] = `
     },
   },
   {
-    "hash": "f4e655a80c313d08",
+    "hash": "2a7f4f4206c66438",
     "hast": [
       {
         "children": [
@@ -47,7 +47,7 @@ exports[`kitchen-sink snapshot > pins the blocks and the rendered HTML 1`] = `
     },
   },
   {
-    "hash": "c16cdfeb5225273a",
+    "hash": "7920b94f2968fe1a",
     "hast": [
       {
         "children": [
@@ -391,7 +391,7 @@ exports[`kitchen-sink snapshot > pins the blocks and the rendered HTML 1`] = `
     },
   },
   {
-    "hash": "451f44ee9b297afe",
+    "hash": "59206cb922fc0708",
     "hast": [
       {
         "children": [
@@ -459,7 +459,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "c6f74903211fa763",
+    "hash": "1bfa3207856f91c0",
     "hast": [
       {
         "children": [
@@ -545,7 +545,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "5d0af93c41113ba3",
+    "hash": "d95b4ed899c43770",
     "hast": [
       {
         "children": [
@@ -580,7 +580,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "30306bb8f0b53ef8",
+    "hash": "6e3c0923c24d3c84",
     "hast": [
       {
         "children": [
@@ -753,7 +753,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "ad3bc43149d73698",
+    "hash": "d1aaefdbb60780b2",
     "hast": [
       {
         "children": [
@@ -846,7 +846,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "99b458f16ab681c9",
+    "hash": "66db983307dc023a",
     "hast": [
       {
         "children": [
@@ -967,7 +967,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "0ef9b6be49ac8a87",
+    "hash": "70be22060801f285",
     "hast": [
       {
         "children": [
@@ -1002,7 +1002,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "c4543a0d45385549",
+    "hash": "e27d63f0f185db69",
     "hast": [
       {
         "children": [
@@ -1192,7 +1192,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "a3b6797e3c497d67",
+    "hash": "5402ad4f5db516ef",
     "hast": [
       {
         "children": [
@@ -1227,7 +1227,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "6cd3ce3d2c00625b",
+    "hash": "7ea36ef7ae28f4df",
     "hast": [
       {
         "children": [
@@ -1243,7 +1243,7 @@ The next line follows it.",
                       },
                     ],
                     "properties": {
-                      "style": "--shiki-light:#A0111F;--shiki-dark:#FF9492",
+                      "style": "color:var(--mdv-token-keyword)",
                     },
                     "tagName": "span",
                     "type": "element",
@@ -1256,7 +1256,7 @@ The next line follows it.",
                       },
                     ],
                     "properties": {
-                      "style": "--shiki-light:#023B95;--shiki-dark:#91CBFF",
+                      "style": "color:var(--mdv-token-variable)",
                     },
                     "tagName": "span",
                     "type": "element",
@@ -1269,7 +1269,7 @@ The next line follows it.",
                       },
                     ],
                     "properties": {
-                      "style": "--shiki-light:#A0111F;--shiki-dark:#FF9492",
+                      "style": "color:var(--mdv-token-operator)",
                     },
                     "tagName": "span",
                     "type": "element",
@@ -1282,7 +1282,7 @@ The next line follows it.",
                       },
                     ],
                     "properties": {
-                      "style": "--shiki-light:#023B95;--shiki-dark:#91CBFF",
+                      "style": "color:var(--mdv-token-type)",
                     },
                     "tagName": "span",
                     "type": "element",
@@ -1295,7 +1295,7 @@ The next line follows it.",
                       },
                     ],
                     "properties": {
-                      "style": "--shiki-light:#A0111F;--shiki-dark:#FF9492",
+                      "style": "color:var(--mdv-token-operator)",
                     },
                     "tagName": "span",
                     "type": "element",
@@ -1308,7 +1308,7 @@ The next line follows it.",
                       },
                     ],
                     "properties": {
-                      "style": "--shiki-light:#023B95;--shiki-dark:#91CBFF",
+                      "style": "color:var(--mdv-token-number)",
                     },
                     "tagName": "span",
                     "type": "element",
@@ -1321,7 +1321,7 @@ The next line follows it.",
                       },
                     ],
                     "properties": {
-                      "style": "--shiki-light:#0E1116;--shiki-dark:#F0F3F6",
+                      "style": "color:var(--mdv-token-punctuation)",
                     },
                     "tagName": "span",
                     "type": "element",
@@ -1344,11 +1344,24 @@ The next line follows it.",
                     "children": [
                       {
                         "type": "text",
-                        "value": "console.",
+                        "value": "console",
                       },
                     ],
                     "properties": {
-                      "style": "--shiki-light:#0E1116;--shiki-dark:#F0F3F6",
+                      "style": "color:var(--mdv-token-variable)",
+                    },
+                    "tagName": "span",
+                    "type": "element",
+                  },
+                  {
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": ".",
+                      },
+                    ],
+                    "properties": {
+                      "style": "color:var(--mdv-token-punctuation)",
                     },
                     "tagName": "span",
                     "type": "element",
@@ -1361,7 +1374,7 @@ The next line follows it.",
                       },
                     ],
                     "properties": {
-                      "style": "--shiki-light:#622CBC;--shiki-dark:#DBB7FF",
+                      "style": "color:var(--mdv-token-function)",
                     },
                     "tagName": "span",
                     "type": "element",
@@ -1370,11 +1383,50 @@ The next line follows it.",
                     "children": [
                       {
                         "type": "text",
-                        "value": "(answer);",
+                        "value": "(",
                       },
                     ],
                     "properties": {
-                      "style": "--shiki-light:#0E1116;--shiki-dark:#F0F3F6",
+                      "style": "color:var(--mdv-foreground)",
+                    },
+                    "tagName": "span",
+                    "type": "element",
+                  },
+                  {
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "answer",
+                      },
+                    ],
+                    "properties": {
+                      "style": "color:var(--mdv-token-variable)",
+                    },
+                    "tagName": "span",
+                    "type": "element",
+                  },
+                  {
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": ")",
+                      },
+                    ],
+                    "properties": {
+                      "style": "color:var(--mdv-foreground)",
+                    },
+                    "tagName": "span",
+                    "type": "element",
+                  },
+                  {
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": ";",
+                      },
+                    ],
+                    "properties": {
+                      "style": "color:var(--mdv-token-punctuation)",
                     },
                     "tagName": "span",
                     "type": "element",
@@ -1407,8 +1459,8 @@ The next line follows it.",
         ],
         "data": undefined,
         "properties": {
-          "class": "shiki shiki-themes github-light-high-contrast github-dark-high-contrast",
-          "style": "--shiki-light:#0e1116;--shiki-dark:#f0f3f6;--shiki-light-bg:#ffffff;--shiki-dark-bg:#0a0c10",
+          "class": "shiki mdv-roles",
+          "style": "background-color:var(--mdv-background);color:var(--mdv-foreground)",
           "tabindex": "0",
         },
         "tagName": "pre",
@@ -1422,7 +1474,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "6ffa365f94bf19bb",
+    "hash": "702d5f273d2810f5",
     "hast": [
       {
         "children": [
@@ -1438,7 +1490,7 @@ The next line follows it.",
                       },
                     ],
                     "properties": {
-                      "style": "--shiki-light:#023B95;--shiki-dark:#91CBFF",
+                      "style": "color:var(--mdv-token-function)",
                     },
                     "tagName": "span",
                     "type": "element",
@@ -1447,11 +1499,37 @@ The next line follows it.",
                     "children": [
                       {
                         "type": "text",
-                        "value": " "hello"",
+                        "value": " "",
                       },
                     ],
                     "properties": {
-                      "style": "--shiki-light:#032563;--shiki-dark:#ADDCFF",
+                      "style": "color:var(--mdv-token-punctuation)",
+                    },
+                    "tagName": "span",
+                    "type": "element",
+                  },
+                  {
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "hello",
+                      },
+                    ],
+                    "properties": {
+                      "style": "color:var(--mdv-token-string)",
+                    },
+                    "tagName": "span",
+                    "type": "element",
+                  },
+                  {
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": """,
+                      },
+                    ],
+                    "properties": {
+                      "style": "color:var(--mdv-token-punctuation)",
                     },
                     "tagName": "span",
                     "type": "element",
@@ -1484,8 +1562,8 @@ The next line follows it.",
         ],
         "data": undefined,
         "properties": {
-          "class": "shiki shiki-themes github-light-high-contrast github-dark-high-contrast",
-          "style": "--shiki-light:#0e1116;--shiki-dark:#f0f3f6;--shiki-light-bg:#ffffff;--shiki-dark-bg:#0a0c10",
+          "class": "shiki mdv-roles",
+          "style": "background-color:var(--mdv-background);color:var(--mdv-foreground)",
           "tabindex": "0",
         },
         "tagName": "pre",
@@ -1499,7 +1577,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "de5684d859d06699",
+    "hash": "73def50a25a1a3c2",
     "hast": [
       {
         "children": [
@@ -1511,11 +1589,11 @@ The next line follows it.",
                     "children": [
                       {
                         "type": "text",
-                        "value": "{ ",
+                        "value": "{",
                       },
                     ],
                     "properties": {
-                      "style": "--shiki-light:#0E1116;--shiki-dark:#F0F3F6",
+                      "style": "color:var(--mdv-token-punctuation)",
                     },
                     "tagName": "span",
                     "type": "element",
@@ -1524,11 +1602,11 @@ The next line follows it.",
                     "children": [
                       {
                         "type": "text",
-                        "value": ""answer"",
+                        "value": " "",
                       },
                     ],
                     "properties": {
-                      "style": "--shiki-light:#024C1A;--shiki-dark:#72F088",
+                      "style": "color:var(--mdv-token-punctuation)",
                     },
                     "tagName": "span",
                     "type": "element",
@@ -1537,11 +1615,11 @@ The next line follows it.",
                     "children": [
                       {
                         "type": "text",
-                        "value": ": ",
+                        "value": "answer",
                       },
                     ],
                     "properties": {
-                      "style": "--shiki-light:#0E1116;--shiki-dark:#F0F3F6",
+                      "style": "color:var(--mdv-token-type)",
                     },
                     "tagName": "span",
                     "type": "element",
@@ -1550,11 +1628,37 @@ The next line follows it.",
                     "children": [
                       {
                         "type": "text",
-                        "value": "42",
+                        "value": """,
                       },
                     ],
                     "properties": {
-                      "style": "--shiki-light:#023B95;--shiki-dark:#91CBFF",
+                      "style": "color:var(--mdv-token-punctuation)",
+                    },
+                    "tagName": "span",
+                    "type": "element",
+                  },
+                  {
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": ":",
+                      },
+                    ],
+                    "properties": {
+                      "style": "color:var(--mdv-token-punctuation)",
+                    },
+                    "tagName": "span",
+                    "type": "element",
+                  },
+                  {
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": " 42",
+                      },
+                    ],
+                    "properties": {
+                      "style": "color:var(--mdv-token-number)",
                     },
                     "tagName": "span",
                     "type": "element",
@@ -1567,7 +1671,7 @@ The next line follows it.",
                       },
                     ],
                     "properties": {
-                      "style": "--shiki-light:#0E1116;--shiki-dark:#F0F3F6",
+                      "style": "color:var(--mdv-token-punctuation)",
                     },
                     "tagName": "span",
                     "type": "element",
@@ -1600,8 +1704,8 @@ The next line follows it.",
         ],
         "data": undefined,
         "properties": {
-          "class": "shiki shiki-themes github-light-high-contrast github-dark-high-contrast",
-          "style": "--shiki-light:#0e1116;--shiki-dark:#f0f3f6;--shiki-light-bg:#ffffff;--shiki-dark-bg:#0a0c10",
+          "class": "shiki mdv-roles",
+          "style": "background-color:var(--mdv-background);color:var(--mdv-foreground)",
           "tabindex": "0",
         },
         "tagName": "pre",
@@ -1615,7 +1719,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "ffdf9cf80fd3ab5a",
+    "hash": "f73bcc37b2bb85d0",
     "hast": [
       {
         "children": [
@@ -1674,8 +1778,8 @@ The next line follows it.",
         ],
         "data": undefined,
         "properties": {
-          "class": "shiki shiki-themes github-light-high-contrast github-dark-high-contrast",
-          "style": "--shiki-light:#0e1116;--shiki-dark:#f0f3f6;--shiki-light-bg:#ffffff;--shiki-dark-bg:#0a0c10",
+          "class": "shiki mdv-roles",
+          "style": "background-color:var(--mdv-background);color:var(--mdv-foreground)",
           "tabindex": "0",
         },
         "tagName": "pre",
@@ -1689,7 +1793,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "8cc30c2422ac9a5d",
+    "hash": "8800e391020ce2f4",
     "hast": [
       {
         "children": [
@@ -1773,8 +1877,8 @@ The next line follows it.",
         ],
         "data": undefined,
         "properties": {
-          "class": "shiki shiki-themes github-light-high-contrast github-dark-high-contrast",
-          "style": "--shiki-light:#0e1116;--shiki-dark:#f0f3f6;--shiki-light-bg:#ffffff;--shiki-dark-bg:#0a0c10",
+          "class": "shiki mdv-roles",
+          "style": "background-color:var(--mdv-background);color:var(--mdv-foreground)",
           "tabindex": "0",
         },
         "tagName": "pre",
@@ -1788,7 +1892,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "54b7f981c7e2d82e",
+    "hash": "bd935756611c36cc",
     "hast": [
       {
         "children": [
@@ -1823,7 +1927,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "fca695ff7e4363ba",
+    "hash": "d6a5df259cab57b1",
     "hast": [
       {
         "children": [
@@ -2023,7 +2127,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "75d60d0e85971bbd",
+    "hash": "99843681a3c5f85b",
     "hast": [
       {
         "children": [
@@ -2107,7 +2211,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "8016a5cce2903e65",
+    "hash": "00b77b2ff071bcd4",
     "hast": [
       {
         "position": {
@@ -2134,7 +2238,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "208ba6fa6254840e",
+    "hash": "67cfc5d146e5ec1d",
     "hast": [
       {
         "children": [
@@ -2169,7 +2273,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "d76817fff4deda7e",
+    "hash": "a0cb40b1bfd6c4dc",
     "hast": [
       {
         "children": [
@@ -2189,6 +2293,7 @@ The next line follows it.",
             },
             "properties": {
               "alt": "Data URL",
+              "dataMdvSource": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
               "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
             },
             "tagName": "img",
@@ -2207,7 +2312,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "9dcad4d5217ed398",
+    "hash": "ba3628284698ec72",
     "hast": [
       {
         "children": [
@@ -2227,6 +2332,7 @@ The next line follows it.",
             },
             "properties": {
               "alt": "Local",
+              "dataMdvSource": "images/pixel.png",
               "src": "images/pixel.png",
             },
             "tagName": "img",
@@ -2245,7 +2351,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "2b307957d22c161d",
+    "hash": "cbc6855813777ef6",
     "hast": [
       {
         "children": [
@@ -2280,7 +2386,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "7c39f2aeffa66c7a",
+    "hash": "6baefdd78a33f8a5",
     "hast": [
       {
         "children": [
@@ -2315,7 +2421,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "01fac9e6a3ea06cd",
+    "hash": "38d4132c8d1bc635",
     "hast": [
       {
         "children": [
@@ -2350,7 +2456,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "5e7036cb5f1e8b89",
+    "hash": "ece79907c963e19e",
     "hast": [
       {
         "children": [],
@@ -2366,7 +2472,7 @@ The next line follows it.",
     },
   },
   {
-    "hash": "10ca1204fbe2c74b",
+    "hash": "ed2f1fe6cd5f78df",
     "hast": [
       {
         "children": [

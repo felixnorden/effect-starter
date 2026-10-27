@@ -14,7 +14,7 @@ import {
 } from "./footnotes.ts";
 import { imageSizeRule } from "./image-size.ts";
 import { MATH_INLINE_TOKEN, mathPlugin, renderMath } from "./math.ts";
-import type { RenderOptions } from "./options.ts";
+import { quoteCharacters, type RenderOptions } from "./options.ts";
 import { sanitizeFragment } from "./raw-html.ts";
 import { buildToc, headingText, isTocMarker, type HeadingEntry } from "./toc.ts";
 
@@ -57,13 +57,19 @@ export type BlockSkeleton =
       readonly hast: ElementContent[];
     };
 
+/** Every field of the record reaches the one parser construction. */
+const parserOptions = (options: RenderOptions) => ({
+  html: options.html,
+  linkify: options.linkify,
+  breaks: options.breaks,
+  typographer: options.typographer,
+  quotes: quoteCharacters(options.quotes),
+  xhtmlOut: options.xhtmlOut,
+  langPrefix: options.langPrefix,
+});
+
 export const createMarkdownIt = (options: RenderOptions): MarkdownParser => {
-  const markdownIt = new MarkdownIt({
-    html: options.html,
-    linkify: options.linkify,
-    breaks: options.breaks,
-    typographer: false,
-  });
+  const markdownIt = new MarkdownIt(parserOptions(options));
   installPlugins(markdownIt);
 
   return {
@@ -136,7 +142,13 @@ export const collectBlocks = (
         blocks.push({
           kind,
           range,
-          hast: buildTree(markdownIt, tokens.slice(index, end + 1), tasks, headings.ids),
+          hast: buildTree(
+            markdownIt,
+            tokens.slice(index, end + 1),
+            tasks,
+            headings.ids,
+            options.langPrefix,
+          ),
         });
       } else {
         tocCount += 1;
@@ -146,7 +158,13 @@ export const collectBlocks = (
       blocks.push({
         kind,
         range,
-        hast: buildTree(markdownIt, tokens.slice(index, end + 1), tasks, headings.ids),
+        hast: buildTree(
+          markdownIt,
+          tokens.slice(index, end + 1),
+          tasks,
+          headings.ids,
+          options.langPrefix,
+        ),
       });
     }
 
@@ -402,6 +420,7 @@ const buildTree = (
   tokens: readonly Token[],
   tasks: Map<Token, TaskInfo>,
   headingIds: Map<Token, string>,
+  langPrefix: string,
 ): ElementContent[] => {
   const root: ElementContent[] = [];
   const stack: Element[] = [];
@@ -515,7 +534,7 @@ const buildTree = (
       const lang = readLang(token.info);
       append(
         elementNode("pre", {}, [
-          elementNode("code", lang === null ? {} : { className: [`language-${lang}`] }, [
+          elementNode("code", lang === null ? {} : { className: [`${langPrefix}${lang}`] }, [
             textNode(token.content),
           ]),
         ]),

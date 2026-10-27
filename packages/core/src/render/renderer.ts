@@ -4,9 +4,10 @@ import type { ElementContent } from "hast";
 
 import { collectBlocks, createMarkdownIt } from "./blocks.ts";
 import type { Block, DocumentModel } from "./document.ts";
+import { resolveImageSources } from "./assets.ts";
 import { readFrontMatter } from "./front-matter.ts";
 import { hashBlock } from "./hash.ts";
-import { CODE_THEMES, CodeHighlighting } from "./highlight.ts";
+import { CodeHighlighting } from "./highlight.ts";
 import { optionsHash, type RenderOptions } from "./options.ts";
 import { sanitizeFragment } from "./raw-html.ts";
 
@@ -16,6 +17,7 @@ export const RenderStageSchema = Schema.Literals([
   "inline",
   "highlight",
   "assemble",
+  "assets",
   "hash",
 ]);
 
@@ -81,7 +83,6 @@ export class Renderer extends Context.Service<
               .highlight({
                 code: skeleton.code,
                 lang: skeleton.lang,
-                codeThemes: CODE_THEMES,
               })
               .pipe(
                 Effect.mapError(
@@ -112,20 +113,22 @@ export class Renderer extends Context.Service<
                   message: describeCause(cause),
                 }),
             });
+            const resolved = yield* resolveAssets(hast, skeleton.range.startLine, options);
             blocks.push({
               kind: "html",
               range: skeleton.range,
-              hash: hashBlock(hast, salt),
-              hast,
+              hash: hashBlock(resolved, salt),
+              hast: resolved,
             });
             continue;
           }
 
+          const resolved = yield* resolveAssets(skeleton.hast, skeleton.range.startLine, options);
           blocks.push({
             kind: skeleton.kind,
             range: skeleton.range,
-            hash: hashBlock(skeleton.hast, salt),
-            hast: skeleton.hast,
+            hash: hashBlock(resolved, salt),
+            hast: resolved,
           });
         }
 
@@ -141,3 +144,14 @@ const frontMatterBlock = (range: Block["range"], salt: string): Block => {
   const hast: ElementContent[] = [];
   return { kind: "frontMatter", range, hash: hashBlock(hast, salt), hast };
 };
+
+/** Resolve every image once, after assembly and before the block is hashed. */
+const resolveAssets = (
+  hast: ElementContent[],
+  line: number,
+  options: RenderOptions,
+): Effect.Effect<ElementContent[], RenderError> =>
+  Effect.try({
+    try: () => resolveImageSources(hast, options),
+    catch: (cause) => new RenderError({ stage: "assets", line, message: describeCause(cause) }),
+  });

@@ -1,11 +1,11 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`renderer fidelity goldens > pins the four block models together 1`] = `
+exports[`renderer fidelity goldens > pins the block models together 1`] = `
 [
   {
     "blocks": [
       {
-        "hash": "67c77fb527df8d7d",
+        "hash": "06323e6b2ab88268",
         "kind": "frontMatter",
         "range": {
           "endLine": 3,
@@ -13,7 +13,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "4cbf26ec1613fa6f",
+        "hash": "61deabd73eba0220",
         "kind": "paragraph",
         "range": {
           "endLine": 5,
@@ -21,7 +21,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "3be6b3c64c7d688b",
+        "hash": "34997463347b3853",
         "kind": "math",
         "range": {
           "endLine": 9,
@@ -29,7 +29,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "24026ab48649fbb7",
+        "hash": "e518b634c9dadb0f",
         "kind": "paragraph",
         "range": {
           "endLine": 11,
@@ -37,7 +37,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "3e69debeedb95b9e",
+        "hash": "86ae9e69900c73fa",
         "kind": "paragraph",
         "range": {
           "endLine": 13,
@@ -45,7 +45,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "bf1f1641d6710e7f",
+        "hash": "5ba9adb40ef63b09",
         "kind": "paragraph",
         "range": {
           "endLine": 15,
@@ -53,7 +53,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "6641f013e0f017bb",
+        "hash": "9e89eacd4a2fa402",
         "kind": "table",
         "range": {
           "endLine": 19,
@@ -61,7 +61,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "600714c48dc6cd4f",
+        "hash": "e5f092b8d5188c60",
         "kind": "paragraph",
         "range": {
           "endLine": 22,
@@ -69,7 +69,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "9af9aecfddf2dd22",
+        "hash": "61e953f07f6e424a",
         "kind": "paragraph",
         "range": {
           "endLine": 24,
@@ -77,7 +77,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "4a07a6b1a050a640",
+        "hash": "37e380fa41be05f0",
         "kind": "paragraph",
         "range": {
           "endLine": 26,
@@ -85,7 +85,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "449bb6e2f7bc6a80",
+        "hash": "ccd0c70035e6167d",
         "kind": "paragraph",
         "range": {
           "endLine": 28,
@@ -93,7 +93,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "4de4b80701e68f6b",
+        "hash": "c6880b0b69aee1e6",
         "kind": "paragraph",
         "range": {
           "endLine": 30,
@@ -101,13 +101,13 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
     ],
-    "optionsHash": "44d825b43a7474f9",
+    "optionsHash": "fed5aab39722d294",
     "title": "Math Fidelity",
   },
   {
     "blocks": [
       {
-        "hash": "67c77fb527df8d7d",
+        "hash": "06323e6b2ab88268",
         "kind": "frontMatter",
         "range": {
           "endLine": 3,
@@ -115,7 +115,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "9f5e4500479e1719",
+        "hash": "32fcb34ce36416c4",
         "kind": "toc",
         "range": {
           "endLine": 5,
@@ -123,7 +123,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "481288de8d36f6db",
+        "hash": "8fa0655d37f60aa9",
         "kind": "paragraph",
         "range": {
           "endLine": 7,
@@ -131,7 +131,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "3f0fd7f1511f31a7",
+        "hash": "05d8956ce83e6a5b",
         "kind": "toc",
         "range": {
           "endLine": 9,
@@ -139,7 +139,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "142ab3ff100f6687",
+        "hash": "3800d03ca270e2e2",
         "kind": "toc",
         "range": {
           "endLine": 11,
@@ -147,7 +147,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "87aea6116dc4cdf1",
+        "hash": "0fd805a7fd4d7772",
         "kind": "toc",
         "range": {
           "endLine": 13,
@@ -155,7 +155,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "d5863342fe36cdea",
+        "hash": "6e1d5028332c9cdb",
         "kind": "heading",
         "range": {
           "endLine": 15,
@@ -163,7 +163,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "8d51f199c95fcd16",
+        "hash": "95bf2fcb4246c9b5",
         "kind": "paragraph",
         "range": {
           "endLine": 17,
@@ -171,7 +171,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "b9a9366ba42db7db",
+        "hash": "e42d6a25fb054b2d",
         "kind": "heading",
         "range": {
           "endLine": 19,
@@ -179,7 +179,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "50c9aa80bc96d8a9",
+        "hash": "e9fa6adaa0581cfa",
         "kind": "heading",
         "range": {
           "endLine": 21,
@@ -187,7 +187,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "13f47b29a08ddfcd",
+        "hash": "2c906ccab3445973",
         "kind": "heading",
         "range": {
           "endLine": 23,
@@ -195,7 +195,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "f4ac369e922b70f0",
+        "hash": "6fd0b94090b1d1b2",
         "kind": "blockquote",
         "range": {
           "endLine": 25,
@@ -203,7 +203,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "81b5d8904f4884a8",
+        "hash": "ac026fbb38102490",
         "kind": "heading",
         "range": {
           "endLine": 27,
@@ -211,7 +211,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "edac7ac3508326a5",
+        "hash": "661468fb60a36306",
         "kind": "heading",
         "range": {
           "endLine": 29,
@@ -219,13 +219,13 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
     ],
-    "optionsHash": "44d825b43a7474f9",
+    "optionsHash": "fed5aab39722d294",
     "title": "Table of Contents Fidelity",
   },
   {
     "blocks": [
       {
-        "hash": "67c77fb527df8d7d",
+        "hash": "06323e6b2ab88268",
         "kind": "frontMatter",
         "range": {
           "endLine": 3,
@@ -233,7 +233,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "841949a3dcd4b1fc",
+        "hash": "6983130b9b7b5c2c",
         "kind": "paragraph",
         "range": {
           "endLine": 5,
@@ -241,7 +241,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "3f5ac5df610acbf4",
+        "hash": "b0a4ec4cc8e57dfc",
         "kind": "list",
         "range": {
           "endLine": 16,
@@ -249,7 +249,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "d5f2f714543e14d1",
+        "hash": "68f76756e4301bc5",
         "kind": "paragraph",
         "range": {
           "endLine": 17,
@@ -257,7 +257,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "71ed3ff7a673d6d7",
+        "hash": "20d247ea3727ac50",
         "kind": "paragraph",
         "range": {
           "endLine": 19,
@@ -265,7 +265,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "dd85d7d981cad41f",
+        "hash": "227ac99a90b600d0",
         "kind": "paragraph",
         "range": {
           "endLine": 21,
@@ -273,7 +273,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "7bea87e4435ce472",
+        "hash": "77ccfeff92756a0d",
         "kind": "paragraph",
         "range": {
           "endLine": 23,
@@ -281,7 +281,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "8e9bfbfb8835e1fa",
+        "hash": "4c82aaed49419752",
         "kind": "paragraph",
         "range": {
           "endLine": 25,
@@ -289,7 +289,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "8219529dde17f182",
+        "hash": "c99e5fd9a4c52d03",
         "kind": "paragraph",
         "range": {
           "endLine": 27,
@@ -297,7 +297,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "1f58e54425400e93",
+        "hash": "67ce3da0117a6011",
         "kind": "paragraph",
         "range": {
           "endLine": 29,
@@ -305,7 +305,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "3cff52934a738b9c",
+        "hash": "74d2962d92831683",
         "kind": "footnote",
         "range": {
           "endLine": 9,
@@ -313,13 +313,13 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
     ],
-    "optionsHash": "44d825b43a7474f9",
+    "optionsHash": "fed5aab39722d294",
     "title": "Extras Fidelity",
   },
   {
     "blocks": [
       {
-        "hash": "134af4b59adb2020",
+        "hash": "fce37ed6e6b0d7cf",
         "kind": "heading",
         "range": {
           "endLine": 1,
@@ -327,7 +327,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "244c16d6559900e1",
+        "hash": "8f16ab94361925e9",
         "kind": "paragraph",
         "range": {
           "endLine": 3,
@@ -335,7 +335,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "d0549d9fc13d3da6",
+        "hash": "5835a40ce9930746",
         "kind": "heading",
         "range": {
           "endLine": 5,
@@ -343,7 +343,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "bdc45ca4b365ac15",
+        "hash": "e5a739a9f1d6a5df",
         "kind": "paragraph",
         "range": {
           "endLine": 7,
@@ -351,7 +351,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "772f5dc05c86ec79",
+        "hash": "913ffa2462a74f0a",
         "kind": "heading",
         "range": {
           "endLine": 9,
@@ -359,7 +359,7 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
       {
-        "hash": "092702bf19b7148a",
+        "hash": "f795faa3da4e0e96",
         "kind": "paragraph",
         "range": {
           "endLine": 11,
@@ -367,7 +367,269 @@ exports[`renderer fidelity goldens > pins the four block models together 1`] = `
         },
       },
     ],
-    "optionsHash": "44d825b43a7474f9",
+    "optionsHash": "fed5aab39722d294",
+    "title": null,
+  },
+  {
+    "blocks": [
+      {
+        "hash": "06323e6b2ab88268",
+        "kind": "frontMatter",
+        "range": {
+          "endLine": 3,
+          "startLine": 1,
+        },
+      },
+      {
+        "hash": "13ddccd123323dd6",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 5,
+          "startLine": 5,
+        },
+      },
+    ],
+    "optionsHash": "fed5aab39722d294",
+    "title": "Image root",
+  },
+  {
+    "blocks": [
+      {
+        "hash": "06323e6b2ab88268",
+        "kind": "frontMatter",
+        "range": {
+          "endLine": 3,
+          "startLine": 1,
+        },
+      },
+      {
+        "hash": "ccd6e9ba22df5dfe",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 5,
+          "startLine": 5,
+        },
+      },
+    ],
+    "optionsHash": "fed5aab39722d294",
+    "title": "Image remote",
+  },
+  {
+    "blocks": [
+      {
+        "hash": "06323e6b2ab88268",
+        "kind": "frontMatter",
+        "range": {
+          "endLine": 3,
+          "startLine": 1,
+        },
+      },
+      {
+        "hash": "365688ac84b6c885",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 5,
+          "startLine": 5,
+        },
+      },
+    ],
+    "optionsHash": "fed5aab39722d294",
+    "title": "Image data",
+  },
+  {
+    "blocks": [
+      {
+        "hash": "06323e6b2ab88268",
+        "kind": "frontMatter",
+        "range": {
+          "endLine": 3,
+          "startLine": 1,
+        },
+      },
+      {
+        "hash": "04cc938fd100b6b8",
+        "kind": "html",
+        "range": {
+          "endLine": 5,
+          "startLine": 5,
+        },
+      },
+      {
+        "hash": "7dd6e906991517b6",
+        "kind": "html",
+        "range": {
+          "endLine": 7,
+          "startLine": 7,
+        },
+      },
+      {
+        "hash": "1b9ebe5215ad1db5",
+        "kind": "html",
+        "range": {
+          "endLine": 9,
+          "startLine": 9,
+        },
+      },
+    ],
+    "optionsHash": "fed5aab39722d294",
+    "title": "Image raw img",
+  },
+  {
+    "blocks": [
+      {
+        "hash": "06323e6b2ab88268",
+        "kind": "frontMatter",
+        "range": {
+          "endLine": 3,
+          "startLine": 1,
+        },
+      },
+      {
+        "hash": "74994297f16522ff",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 5,
+          "startLine": 5,
+        },
+      },
+    ],
+    "optionsHash": "fed5aab39722d294",
+    "title": "Image missing",
+  },
+  {
+    "blocks": [
+      {
+        "hash": "06323e6b2ab88268",
+        "kind": "frontMatter",
+        "range": {
+          "endLine": 3,
+          "startLine": 1,
+        },
+      },
+      {
+        "hash": "7e4633eeac8b72f7",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 5,
+          "startLine": 5,
+        },
+      },
+    ],
+    "optionsHash": "fed5aab39722d294",
+    "title": "Image blocked",
+  },
+  {
+    "blocks": [
+      {
+        "hash": "06323e6b2ab88268",
+        "kind": "frontMatter",
+        "range": {
+          "endLine": 3,
+          "startLine": 1,
+        },
+      },
+      {
+        "hash": "5cf14d60ae9ac5d6",
+        "kind": "html",
+        "range": {
+          "endLine": 5,
+          "startLine": 5,
+        },
+      },
+      {
+        "hash": "bd0f3c6e0b04433e",
+        "kind": "html",
+        "range": {
+          "endLine": 7,
+          "startLine": 7,
+        },
+      },
+    ],
+    "optionsHash": "fed5aab39722d294",
+    "title": "Image unresolvable",
+  },
+  {
+    "blocks": [
+      {
+        "hash": "06323e6b2ab88268",
+        "kind": "frontMatter",
+        "range": {
+          "endLine": 3,
+          "startLine": 1,
+        },
+      },
+      {
+        "hash": "3e2668e5f77bb63f",
+        "kind": "paragraph",
+        "range": {
+          "endLine": 5,
+          "startLine": 5,
+        },
+      },
+    ],
+    "optionsHash": "fed5aab39722d294",
+    "title": "Image relative",
+  },
+  {
+    "blocks": [
+      {
+        "hash": "542bd12eec2225d5",
+        "kind": "heading",
+        "range": {
+          "endLine": 1,
+          "startLine": 1,
+        },
+      },
+      {
+        "hash": "aafb91372165a697",
+        "kind": "code",
+        "range": {
+          "endLine": 5,
+          "startLine": 3,
+        },
+      },
+      {
+        "hash": "781c8ef612ccae13",
+        "kind": "code",
+        "range": {
+          "endLine": 9,
+          "startLine": 7,
+        },
+      },
+      {
+        "hash": "758789fa934bc8ce",
+        "kind": "code",
+        "range": {
+          "endLine": 14,
+          "startLine": 11,
+        },
+      },
+      {
+        "hash": "49fa6ab17412f18a",
+        "kind": "code",
+        "range": {
+          "endLine": 19,
+          "startLine": 16,
+        },
+      },
+      {
+        "hash": "e7f7cbb0c4fa3b89",
+        "kind": "code",
+        "range": {
+          "endLine": 25,
+          "startLine": 21,
+        },
+      },
+      {
+        "hash": "a164910f270eb9b5",
+        "kind": "code",
+        "range": {
+          "endLine": 31,
+          "startLine": 27,
+        },
+      },
+    ],
+    "optionsHash": "fed5aab39722d294",
     "title": null,
   },
 ]

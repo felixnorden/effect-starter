@@ -2,15 +2,75 @@
 import { Context, Effect, Layer, Schema } from "effect";
 import type { Element, Root } from "hast";
 
-/** Shiki themes are constants: a theme switch is CSS-only and changes no hash. */
-export type CodeThemes = {
-  readonly light: string;
-  readonly dark: string;
+/** The one role set the sheets define and the closure corpus must paint. */
+export const ROLES = [
+  "keyword",
+  "string",
+  "number",
+  "constant",
+  "function",
+  "type",
+  "variable",
+  "comment",
+  "operator",
+  "punctuation",
+  "tag",
+  "attribute",
+] as const;
+export type Role = (typeof ROLES)[number];
+export const FALLBACK_ROLE = "foreground" as const;
+
+/** The syntax scopes each role paints; a role value comes from these scopes. */
+export const ROLE_SCOPES: Record<Role, readonly string[]> = {
+  keyword: ["keyword", "storage.type", "storage.modifier"],
+  string: ["string"],
+  number: ["constant.numeric"],
+  constant: ["constant.language", "constant.character"],
+  function: ["entity.name.function", "support.function"],
+  type: ["support.type", "entity.name.type"],
+  variable: ["variable", "meta.definition.variable"],
+  comment: ["comment"],
+  operator: ["keyword.operator"],
+  punctuation: ["punctuation"],
+  tag: ["entity.name.tag"],
+  attribute: ["entity.other.attribute-name"],
 };
 
-export const CODE_THEMES: CodeThemes = {
-  light: "github-light-high-contrast",
-  dark: "github-dark-high-contrast",
+/**
+ * One exemplar per role: the code, the grammar, and the token whose colour the
+ * source theme paints for that role's scopes. The token is located by offset, so
+ * a theme that merges or splits adjacent tokens still reads the same span.
+ */
+export const ROLE_EXEMPLARS: Record<
+  Role,
+  { readonly lang: string; readonly code: string; readonly token: string }
+> = {
+  keyword: { lang: "typescript", code: "const x = 1", token: "const" },
+  string: { lang: "typescript", code: 'const s = "hi";', token: "hi" },
+  number: { lang: "typescript", code: "const n = 42;", token: "42" },
+  constant: { lang: "typescript", code: "const c = true;", token: "true" },
+  function: { lang: "typescript", code: "function greet() {}", token: "greet" },
+  type: { lang: "typescript", code: 'const t: string = "";', token: "string" },
+  variable: { lang: "typescript", code: "const value = 1;", token: "value" },
+  comment: { lang: "typescript", code: "// note", token: "// note" },
+  operator: { lang: "typescript", code: "const sum = a + b;", token: "+" },
+  punctuation: { lang: "json", code: '{"a": 1}', token: "{" },
+  tag: { lang: "html", code: "<div>", token: "div" },
+  attribute: { lang: "html", code: '<a href="#">', token: "href" },
+};
+
+/** The one highlighter theme: every value is a role variable, never a colour. */
+export const ROLE_THEME = {
+  name: "mdv-roles",
+  type: "light" as const,
+  colors: {
+    "editor.background": "var(--mdv-background)",
+    "editor.foreground": "var(--mdv-foreground)",
+  },
+  tokenColors: ROLES.map((role) => ({
+    scope: ROLE_SCOPES[role],
+    settings: { foreground: `var(--mdv-token-${role})` },
+  })),
 };
 
 export class HighlightError extends Schema.TaggedError<
@@ -23,13 +83,11 @@ export class HighlightError extends Schema.TaggedError<
 export type HighlightRequest = {
   readonly code: string;
   readonly lang: string | null;
-  readonly codeThemes: CodeThemes;
 };
 
 export type HighlightOptions = {
   readonly lang: string;
-  readonly themes: CodeThemes;
-  readonly defaultColor: false;
+  readonly theme: string;
 };
 
 /**
@@ -156,8 +214,7 @@ export class CodeHighlighting extends Context.Service<
         try: () =>
           highlighter.codeToHast(request.code, {
             lang: grammar,
-            themes: request.codeThemes,
-            defaultColor: false,
+            theme: ROLE_THEME.name,
           }),
         catch: (cause) =>
           new HighlightError({ message: `failed to highlight: ${describeCause(cause)}` }),
@@ -181,10 +238,7 @@ const createRealHighlighter = async (): Promise<HighlighterPort> => {
   ]);
 
   const highlighter = await createHighlighterCore({
-    themes: [
-      import("shiki/themes/github-light-high-contrast.mjs"),
-      import("shiki/themes/github-dark-high-contrast.mjs"),
-    ],
+    themes: [ROLE_THEME as never],
     langs: [],
     engine: createJavaScriptRegexEngine(),
   });
@@ -201,8 +255,7 @@ const createRealHighlighter = async (): Promise<HighlighterPort> => {
       // so a block hash cannot change without a content change.
       highlighter.codeToHast("x", {
         lang,
-        themes: CODE_THEMES,
-        defaultColor: false,
+        theme: ROLE_THEME.name,
       });
     },
   };
