@@ -35,10 +35,10 @@ export const startPreview = async (
     const timer = setTimeout(() => rejectUrl(new Error(`no URL from preview: ${buffer}`)), 30_000);
     child.stdout?.on("data", (chunk: Buffer) => {
       buffer += chunk.toString();
-      const match = /http:\/\/127\.0\.0\.1:\d+\//u.exec(buffer);
+      const match = /http:\/\/127\.0\.0\.1:\d+\/?/u.exec(buffer);
       if (match?.[0] !== undefined) {
         clearTimeout(timer);
-        resolveUrl(match[0]);
+        resolveUrl(match[0].endsWith("/") ? match[0] : `${match[0]}/`);
       }
     });
     child.on("exit", (code) => {

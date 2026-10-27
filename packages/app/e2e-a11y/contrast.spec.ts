@@ -97,16 +97,10 @@ test("body, muted, inline-code, and fence text clear 4.5:1 in both themes", asyn
       ratio: ratioOf(inlineCode.color, inlineCode.background, "inline code"),
     });
 
-    // Inline `--shiki-*` values are what `styles.css` reads; a stylesheet scan
-    // could not satisfy this spec.
-    const fence = await page.evaluate((dark) => {
-      const tokens = [...document.querySelectorAll(".shiki span")];
-      return tokens.map((token) =>
-        dark
-          ? getComputedStyle(token).getPropertyValue("--shiki-dark")
-          : getComputedStyle(token).getPropertyValue("--shiki-light"),
-      );
-    }, theme === "dark");
+    // The sheet is linked into the page, so the sampled colour is composed.
+    const fence = await page.evaluate(() =>
+      [...document.querySelectorAll(".shiki span")].map((token) => getComputedStyle(token).color),
+    );
     const codeBackground = await page.evaluate(
       () => getComputedStyle(document.querySelector(".shiki") ?? document.body).backgroundColor,
     );
@@ -114,7 +108,7 @@ test("body, muted, inline-code, and fence text clear 4.5:1 in both themes", asyn
     expect(fence.length, "at least one fence token").toBeGreaterThan(0);
     expect(
       fence.some((value) => value.trim() !== ""),
-      "at least one inline --shiki value",
+      "at least one computed token colour",
     ).toBe(true);
     for (const [index, value] of fence.entries()) {
       if (value.trim() === "") continue;
@@ -169,4 +163,43 @@ test("the KaTeX error text clears 4.5:1 in both themes", async ({ page }) => {
     console.log(`${theme} katex error: ${ratio.toFixed(2)}`);
     expect(ratio, `${theme} katex error`).toBeGreaterThanOrEqual(MINIMUM);
   });
+});
+
+test("samples the composed role colours for one non-default pair", async ({ page }) => {
+  const copy = copyFixture("fixtures/render-fidelity/themes.md");
+  const server = await startPreview(copy.file);
+
+  try {
+    await page.goto(server.url);
+    await page.waitForSelector(".shiki");
+    await page.getByRole("button", { name: "Line numbers" }).click();
+    await page.selectOption('[data-theme-select="light"]', "light-plus");
+    await page.selectOption('[data-theme-select="dark"]', "dark-plus");
+
+    for (const theme of THEMES) {
+      await setTheme(page, theme);
+      await paintFrame(page);
+      const sample = await page.evaluate(() => ({
+        background: getComputedStyle(document.querySelector(".shiki") ?? document.body)
+          .backgroundColor,
+        colours: [...document.querySelectorAll(".shiki span")].map(
+          (token) => getComputedStyle(token).color,
+        ),
+        gutter: getComputedStyle(document.querySelector(".line") ?? document.body, "::before")
+          .color,
+      }));
+
+      const ratios = sample.colours.map((colour, index) =>
+        ratioOf(colour, sample.background, `${theme} role ${index}`),
+      );
+      ratios.push(ratioOf(sample.gutter, sample.background, `${theme} gutter`));
+      console.log(
+        `${theme} non-default smallest: ${Math.min(...ratios).toFixed(2)} (${ratios.length} samples)`,
+      );
+      for (const ratio of ratios) expect(ratio).toBeGreaterThanOrEqual(MINIMUM);
+    }
+  } finally {
+    await server.stop();
+    copy.stop();
+  }
 });
