@@ -43,15 +43,23 @@ const codeOf = (): WireBlock =>
       type: "element",
       tagName: "pre",
       properties: {
-        className: ["shiki", "shiki-themes"],
-        style: "--shiki-light:#fff;--shiki-dark:#000;background-color:#eee",
+        className: ["shiki", "mdv-roles"],
+        style: "background-color:var(--mdv-background);color:var(--mdv-foreground)",
       },
       children: [
         {
           type: "element",
           tagName: "code",
           properties: {},
-          children: [{ type: "text", value: "const x = 1;" }],
+          children: [
+            {
+              type: "element",
+              tagName: "span",
+              properties: { style: "color:var(--mdv-token-keyword)" },
+              children: [{ type: "text", value: "const" }],
+            },
+            { type: "text", value: " x = 1;" },
+          ],
         },
       ],
     },
@@ -88,26 +96,99 @@ describe("BlockList", () => {
     expect(markup).toContain("Visible");
   });
 
-  it("renders a code block's pre subtree with both theme variables", () => {
+  it("renders a code block's pre subtree with role variables", () => {
     const markup = markupOf([codeOf()]);
 
-    expect(markup).toContain("--shiki-light");
-    expect(markup).toContain("--shiki-dark");
+    expect(markup).toContain("var(--mdv-background)");
+    expect(markup).toContain("var(--mdv-foreground)");
+    expect(markup).toContain("var(--mdv-token-keyword)");
   });
 
   it("maps a Shiki style string to a React style object", () => {
     const markup = markupOf([codeOf()]);
 
-    expect(markup).toContain("--shiki-light:#fff");
-    expect(markup).toContain("--shiki-dark:#000");
-    expect(markup).toContain("background-color:#eee");
+    expect(markup).toContain("background-color:var(--mdv-background)");
+    expect(markup).toContain("color:var(--mdv-foreground)");
     expect(toReactProperties({ style: "background-color:#fff;--x:y" })).toEqual({
       style: { backgroundColor: "#fff", "--x": "y" },
     });
   });
 
   it("joins array-valued class names", () => {
-    expect(markupOf([codeOf()])).toContain('class="shiki shiki-themes"');
+    expect(markupOf([codeOf()])).toContain('class="shiki mdv-roles"');
+  });
+
+  it("renders one control per heading, after the heading, nested included", () => {
+    const withoutId = block("plainHeading", "heading", [
+      {
+        type: "element",
+        tagName: "h2",
+        properties: {},
+        children: [{ type: "text", value: "No id" }],
+      },
+    ]);
+    const nested = block("quote", "blockquote", [
+      {
+        type: "element",
+        tagName: "blockquote",
+        properties: {},
+        children: [
+          {
+            type: "element",
+            tagName: "h3",
+            properties: { id: "nested" },
+            children: [{ type: "text", value: "Nested" }],
+          },
+        ],
+      },
+    ]);
+
+    const markup = markupOf([headingOf("heading", "Heading"), withoutId, nested]);
+
+    expect(markup.match(/data-mdv-copy-link/gu)).toHaveLength(2);
+    expect(markup).toContain('data-mdv-copy-link="heading"');
+    expect(markup).toContain('data-mdv-copy-link="nested"');
+    expect(markup).toContain('aria-label="Copy link to Heading"');
+    expect(markup).toContain('<h2 id="heading">Heading</h2><button');
+    expect(markup).not.toContain('data-mdv-copy-link="undefined"');
+  });
+
+  it("renders the control as a sibling of the block content", () => {
+    const markup = markupOf([codeOf()]);
+    const preEnd = markup.indexOf("</pre>");
+    const button = markup.indexOf("data-mdv-copy-code");
+
+    expect(markup).toContain('data-block-id="code"');
+    expect(button).toBeGreaterThan(preEnd);
+    expect(markup).toContain('aria-label="Copy code"');
+    expect(markup.match(/data-mdv-copy-code/gu)).toHaveLength(1);
+  });
+
+  it("leaves a nested fence without a control", () => {
+    const nested = block("quote", "blockquote", [
+      {
+        type: "element",
+        tagName: "blockquote",
+        properties: {},
+        children: [
+          {
+            type: "element",
+            tagName: "pre",
+            properties: { className: ["shiki", "mdv-roles"] },
+            children: [
+              {
+                type: "element",
+                tagName: "code",
+                properties: {},
+                children: [{ type: "text", value: "nested" }],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    expect(markupOf([nested])).not.toContain("data-mdv-copy-code");
   });
 
   it("drops an event-handler property", () => {

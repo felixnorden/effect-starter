@@ -65,8 +65,18 @@ describe("contrastRatio", () => {
   it("declares the ten text pairs over two variables each", () => {
     expect(DECLARED_TEXT_PAIRS).toHaveLength(10);
     for (const pair of DECLARED_TEXT_PAIRS) {
-      expect(pair.foreground.startsWith("--color-")).toBe(true);
-      expect(pair.background.startsWith("--color-")).toBe(true);
+      expect(pair.foreground).toMatch(/^--(?:color|mdv)-/u);
+      expect(pair.background).toMatch(/^--(?:color|mdv)-/u);
     }
+
+    expect(DECLARED_TEXT_PAIRS).toContainEqual({
+      foreground: "--mdv-token-comment",
+      background: "--mdv-background",
+    });
+    expect(DECLARED_TEXT_PAIRS).toContainEqual({
+      foreground: "--mdv-foreground",
+      background: "--mdv-background",
+    });
+    expect(DECLARED_TEXT_PAIRS.some((pair) => pair.background === "--color-code-bg")).toBe(false);
   });
 });

@@ -21,6 +21,7 @@ export default defineConfig({
     proxy: {
       "/ws": { target: `http://127.0.0.1:${DEV_PORT}`, ws: true },
       "/local": { target: `http://127.0.0.1:${DEV_PORT}` },
+      "/image-root": { target: `http://127.0.0.1:${DEV_PORT}` },
     },
   },
 });

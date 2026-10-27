@@ -1,6 +1,6 @@
 // @effect-diagnostics asyncFunction:off
 import { Effect } from "effect";
-import { mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -20,9 +20,9 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
-const outcome = (root: string, urlPath: string) =>
+const outcome = (root: string, urlPath: string, prefix = "/local/") =>
   Effect.runPromise(
-    Effect.match(resolveAsset(root, urlPath), {
+    Effect.match(resolveAsset(root, urlPath, prefix), {
       onFailure: (error) => ({ ok: false as const, error }),
       onSuccess: (path) => ({ ok: true as const, path }),
     }),
@@ -132,5 +132,54 @@ describe("assetPolicy", () => {
       expect(policy.inline).toBe(false);
       expect(policy.contentType).toBe("application/octet-stream");
     }
+  });
+});
+
+describe("resolveAsset with a route prefix", () => {
+  it("resolves a reference inside the image root", async () => {
+    const root = makeRoot();
+    writeFileSync(join(root, "a.png"), "png");
+
+    const result = await outcome(root, "/image-root/a.png", "/image-root/");
+
+    expect(result.ok).toBe(true);
+    expect(result.ok ? result.path : "").toContain("a.png");
+    expect(result.ok ? result.path.startsWith(realpathSync(root)) : false).toBe(true);
+  });
+
+  it("refuses a parent segment inside a root reference", async () => {
+    const root = makeRoot();
+
+    const result = await outcome(root, "/image-root/../../secret", "/image-root/");
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { status: 403, reason: "traversal" },
+    });
+  });
+
+  it("refuses an encoded separator inside a root reference", async () => {
+    const root = makeRoot();
+
+    const result = await outcome(root, "/image-root/a%2Fb.png", "/image-root/");
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { status: 403, reason: "traversal" },
+    });
+  });
+
+  it("refuses a symlink that leaves the image root", async () => {
+    const root = makeRoot();
+    const outside = makeRoot();
+    writeFileSync(join(outside, "secret.txt"), "secret");
+    symlinkSync(join(outside, "secret.txt"), join(root, "link.txt"));
+
+    const result = await outcome(root, "/image-root/link.txt", "/image-root/");
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { status: 403, reason: "symlinkEscape" },
+    });
   });
 });

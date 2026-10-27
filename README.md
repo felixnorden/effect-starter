@@ -19,6 +19,7 @@ bun run preview fixtures/kitchen-sink.md
 bun run render fixtures/kitchen-sink.md
 bun run bench
 bun run fixtures:generate  # rewrites the committed large fixtures
+bun run themes:generate    # rewrites the committed theme sheets and offerable list
 ```
 
 `bun run preview fixtures/kitchen-sink.md` renders the file, builds the page

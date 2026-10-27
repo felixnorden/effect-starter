@@ -1,0 +1,16 @@
+[data-theme="dark"] {
+  --mdv-token-keyword: #FF7B72;
+  --mdv-token-string: #A5D6FF;
+  --mdv-token-number: #79C0FF;
+  --mdv-token-constant: #79C0FF;
+  --mdv-token-function: #D2A8FF;
+  --mdv-token-type: #79C0FF;
+  --mdv-token-variable: #79C0FF;
+  --mdv-token-comment: #8B949E;
+  --mdv-token-operator: #FF7B72;
+  --mdv-token-punctuation: #E6EDF3;
+  --mdv-token-tag: #7EE787;
+  --mdv-token-attribute: #79C0FF;
+  --mdv-background: #0d1117;
+  --mdv-foreground: #e6edf3;
+}

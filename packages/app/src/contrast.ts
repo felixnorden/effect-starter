@@ -67,8 +67,8 @@ export const DECLARED_TEXT_PAIRS: readonly DeclaredTextPair[] = [
   { foreground: "--color-fg", background: "--color-surface" },
   { foreground: "--color-muted", background: "--color-surface" },
   { foreground: "--color-accent", background: "--color-surface" },
-  { foreground: "--color-fg", background: "--color-code-bg" },
-  { foreground: "--color-accent", background: "--color-code-bg" },
+  { foreground: "--mdv-token-comment", background: "--mdv-background" },
+  { foreground: "--mdv-foreground", background: "--mdv-background" },
   { foreground: "--color-banner-fg", background: "--color-banner-bg" },
   { foreground: "--color-accent", background: "--color-button-bg" },
 ];

@@ -133,6 +133,9 @@ const VOID_ELEMENTS = new Set(["img", "br", "hr", "input", "source", "meta", "li
 
 const PASS_THROUGH_SCHEMES = ["http:", "https:", "mailto:"];
 
+/** Core owns the reference shape; the page owns the route that serves it. */
+const IMAGE_ROOT_PREFIX = "/image-root/";
+
 /**
  * The page's one reference rule, for `img src` and `a href`. A relative
  * reference that normalizes inside the source directory is rewritten onto the
@@ -145,6 +148,7 @@ export const mapReference = (attribute: "src" | "href", value: string): string |
     return value;
   }
   if (attribute === "src" && /^data:image\//iu.test(value)) return value;
+  if (value.startsWith(IMAGE_ROOT_PREFIX)) return mapRootReference(value);
   // Any other scheme (`javascript:`, `data:text/html`, `vbscript:`) never
   // becomes a route.
   if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/u.test(value)) return null;
@@ -185,6 +189,37 @@ export const mapReference = (attribute: "src" | "href", value: string): string |
   return `/local/${normalized.join("/")}${query}${fragment}`;
 };
 
+/** The same segment rules as a relative source, applied inside the image root. */
+const mapRootReference = (value: string): string | null => {
+  const hashIndex = value.indexOf("#");
+  const beforeHash = hashIndex === -1 ? value : value.slice(0, hashIndex);
+  const fragment = hashIndex === -1 ? "" : value.slice(hashIndex);
+  const queryIndex = beforeHash.indexOf("?");
+  const rawPath = queryIndex === -1 ? beforeHash : beforeHash.slice(0, queryIndex);
+  const query = queryIndex === -1 ? "" : beforeHash.slice(queryIndex);
+  if (rawPath.includes("\\") || /%(?:2f|5c)/iu.test(rawPath)) return null;
+
+  const segments: string[] = [];
+  for (const segment of rawPath.slice(IMAGE_ROOT_PREFIX.length).split("/")) {
+    if (segment === "" || segment === ".") continue;
+
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(segment);
+    } catch {
+      return null;
+    }
+
+    if (decoded.includes("/") || decoded.includes("\\")) return null;
+    if (decoded === ".") continue;
+    if (decoded === "..") return null;
+    segments.push(decoded);
+  }
+
+  if (segments.length === 0) return null;
+  return `${IMAGE_ROOT_PREFIX}${segments.join("/")}${query}${fragment}`;
+};
+
 const withMappedReferences = (
   tagName: string,
   properties: Record<string, unknown>,
@@ -205,13 +240,25 @@ const withMappedReferences = (
   return next;
 };
 
-export const HastNode = ({ node }: { readonly node: HastNode }): ReactNode =>
-  node.type === "text"
-    ? node.value
-    : createElement(
-        node.tagName,
-        toReactProperties(withMappedReferences(node.tagName, node.properties ?? {})),
-        VOID_ELEMENTS.has(node.tagName)
-          ? undefined
-          : (node.children ?? []).map((child, index) => <HastNode key={index} node={child} />),
-      );
+export type HastDecoration = (node: HastElement, element: ReactNode) => ReactNode;
+
+export const HastNode = ({
+  node,
+  decorate,
+}: {
+  readonly node: HastNode;
+  readonly decorate?: HastDecoration;
+}): ReactNode => {
+  if (node.type === "text") return node.value;
+
+  const element = createElement(
+    node.tagName,
+    toReactProperties(withMappedReferences(node.tagName, node.properties ?? {})),
+    VOID_ELEMENTS.has(node.tagName)
+      ? undefined
+      : (node.children ?? []).map((child, index) => (
+          <HastNode key={index} node={child} decorate={decorate} />
+        )),
+  );
+  return decorate === undefined ? element : decorate(node, element);
+};

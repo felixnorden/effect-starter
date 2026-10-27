@@ -18,11 +18,13 @@
     "check:a11y": "vite build && playwright test -c playwright.a11y.config.ts"
   },
   "dependencies": {
+    "@effect/platform-bun": "catalog:",
     "@mdv/core": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
     "@axe-core/playwright": "catalog:",
+    "@effect/platform-node": "catalog:",
     "@effect/tsgo": "catalog:",
     "@effect/vitest": "catalog:",
     "@playwright/test": "catalog:",

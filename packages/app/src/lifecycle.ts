@@ -17,11 +17,11 @@ export const ensureClientBuild = (deps: {
  * The fail-fast order: render first (a startup render failure exits before
  * binding), then make sure the client build exists, then start serving.
  */
-export const preparePreview = <A, ERender, EStart>(deps: {
-  readonly render: () => Effect.Effect<void, ERender>;
-  readonly ensureClient: Effect.Effect<void, BuildError>;
-  readonly start: () => Effect.Effect<A, EStart>;
-}): Effect.Effect<A, ERender | BuildError | EStart> =>
+export const preparePreview = <A, ERender, EStart, R>(deps: {
+  readonly render: () => Effect.Effect<void, ERender, R>;
+  readonly ensureClient: Effect.Effect<void, BuildError, R>;
+  readonly start: () => Effect.Effect<A, EStart, R>;
+}): Effect.Effect<A, ERender | BuildError | EStart, R> =>
   Effect.gen(function* () {
     yield* deps.render();
     yield* deps.ensureClient;

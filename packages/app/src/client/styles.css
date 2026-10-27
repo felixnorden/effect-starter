@@ -8,7 +8,6 @@
   --color-accent: #0969da;
   --color-banner-bg: #fff8c5;
   --color-banner-fg: #4d2d00;
-  --color-code-bg: #f6f8fa;
   --color-button-bg: #f6f8fa;
   --radius: 0.5rem;
 }
@@ -23,7 +22,6 @@
   --color-accent: #4493f8;
   --color-banner-bg: #3a2d00;
   --color-banner-fg: #f0d58c;
-  --color-code-bg: #151b23;
   --color-button-bg: #212830;
 }
 
@@ -98,12 +96,18 @@ a {
 .preview-body pre {
   padding: 1rem;
   overflow-x: auto;
-  background: var(--color-code-bg);
   border-radius: var(--radius);
 }
 
 .preview-body img {
   max-width: 100%;
+}
+
+.preview-body [data-mdv-placeholder] {
+  display: inline-block;
+  overflow: hidden;
+  color: var(--color-muted);
+  border: 1px dashed var(--color-border);
 }
 
 .preview-body table {
@@ -123,16 +127,25 @@ a {
   border-inline-start: 4px solid var(--color-border);
 }
 
-.shiki,
-.shiki span {
-  color: var(--shiki-light);
-}
-
-[data-theme="dark"] .shiki,
-[data-theme="dark"] .shiki span {
-  color: var(--shiki-dark);
-}
-
 .shiki {
-  background: var(--color-code-bg);
+  background: var(--mdv-background);
+  color: var(--mdv-foreground);
+}
+
+.shiki code {
+  counter-reset: mdv-line;
+}
+
+[data-line-numbers="on"] .shiki .line::before {
+  counter-increment: mdv-line;
+  content: counter(mdv-line);
+  color: var(--mdv-token-comment);
+  /* Inline content, so a wrapped line keeps its box. */
+}
+
+/* The highlighter emits one extra empty line for the trailing newline. A
+   genuinely blank final source line loses its number under this guard. */
+[data-line-numbers="on"] .shiki .line:last-child:empty::before {
+  content: none;
+  counter-increment: none;
 }

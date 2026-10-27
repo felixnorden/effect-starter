@@ -1,7 +1,8 @@
+import { referenceFor } from "@mdv/core";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { HastNode, type HastNode as HastNodeType } from "./hast.tsx";
+import { HastNode, toReactProperties, type HastNode as HastNodeType } from "./hast.tsx";
 
 const markupOf = (tagName: string, properties: Record<string, unknown>): string =>
   renderToStaticMarkup(
@@ -94,6 +95,22 @@ describe("reference mapping", () => {
   it("drops a javascript: href that reached the mapping", () => {
     expect(attribute(link("javascript:alert(1)"), "href")).toBeUndefined();
   });
+
+  it("maps every reference core emits to itself", () => {
+    const value = referenceFor("nested/a.png");
+
+    expect(attribute(image(value), "src")).toBe(value);
+  });
+
+  it("refuses a traversal inside a root reference", () => {
+    expect(attribute(image("/image-root/../secret"), "src")).toBeUndefined();
+    expect(attribute(image("/image-root/a%2Fb.png"), "src")).toBeUndefined();
+    expect(attribute(image("/image-root/a\\b.png"), "src")).toBeUndefined();
+  });
+
+  it("still drops an authored absolute source", () => {
+    expect(attribute(image("/etc/passwd"), "src")).toBeUndefined();
+  });
 });
 
 describe("generated properties", () => {
@@ -141,6 +158,26 @@ describe("generated properties", () => {
 
     expect(attribute(markup, "role")).toBe("math");
     expect(attribute(markup, "xmlns")).toBe("http://www.w3.org/1998/Math/MathML");
+  });
+
+  it("maps the placeholder's data and ARIA attributes to hyphenated names", () => {
+    const properties = toReactProperties({
+      dataMdvPlaceholder: "",
+      dataMdvSource: "a.png",
+      dataMdvResolved: "/local/a.png",
+      role: "img",
+      ariaLabel: "diagram",
+      onclick: "x()",
+    });
+
+    expect(properties).toMatchObject({
+      "data-mdv-placeholder": "",
+      "data-mdv-source": "a.png",
+      "data-mdv-resolved": "/local/a.png",
+      role: "img",
+      "aria-label": "diagram",
+    });
+    expect(properties).not.toHaveProperty("onclick");
   });
 
   it("still drops an event handler and an unknown property", () => {

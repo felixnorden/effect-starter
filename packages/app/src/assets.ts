@@ -1,4 +1,8 @@
+// @effect-diagnostics unstableApiUsage:off
 import { Effect, Schema } from "effect";
+import type * as HttpPlatform from "effect/http/HttpPlatform";
+import * as HttpServerResponse from "effect/http/HttpServerResponse";
+import type { PlatformError } from "effect/PlatformError";
 import { realpath } from "node:fs/promises";
 import { basename, extname, resolve, sep } from "node:path";
 
@@ -34,11 +38,14 @@ const decodePath = (encoded: string): string | null => {
  * real-path check is what rejects a symlink escape; the segment check rejects
  * encoded traversal before the file system sees it.
  */
-export const resolveAsset = (root: string, urlPath: string): Effect.Effect<string, AssetRejected> =>
+export const resolveAsset = (
+  root: string,
+  urlPath: string,
+  prefix = "/local/",
+): Effect.Effect<string, AssetRejected> =>
   Effect.gen(function* () {
     const withoutQuery = urlPath.split("?")[0] ?? "";
     const pathname = withoutQuery.split("#")[0] ?? "";
-    const prefix = "/local/";
     if (!pathname.startsWith(prefix)) {
       return yield* reject(403, "traversal", "not a local asset path");
     }
@@ -114,14 +121,21 @@ export const assetPolicy = (path: string): AssetPolicy => {
   }
 };
 
-export const localAssetResponse = (path: string): Response => {
+export const localAssetResponse = (
+  path: string,
+): Effect.Effect<
+  HttpServerResponse.HttpServerResponse,
+  PlatformError,
+  HttpPlatform.HttpPlatform
+> => {
   const policy = assetPolicy(path);
   const headers: Record<string, string> = {
-    "content-type": policy.contentType,
     "x-content-type-options": "nosniff",
   };
   if (!policy.inline) {
     headers["content-disposition"] = `attachment; filename="${basename(path)}"`;
   }
-  return new Response(Bun.file(path), { headers });
+  return HttpServerResponse.file(path, { contentType: policy.contentType }).pipe(
+    Effect.map((response) => HttpServerResponse.setHeaders(response, headers)),
+  );
 };

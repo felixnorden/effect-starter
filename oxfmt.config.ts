@@ -5,5 +5,9 @@ import { defineConfig } from "oxfmt";
 // 80-column print width.
 export default defineConfig({
   // Committed generator output and pinned snapshot HTML are not hand-formatted.
-  ignorePatterns: ["fixtures/generated/**", "**/__snapshots__/*.html"],
+  ignorePatterns: [
+    "fixtures/generated/**",
+    "**/__snapshots__/*.html",
+    "packages/app/src/client/public/theme-sheets/**",
+  ],
 });

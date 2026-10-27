@@ -1,5 +1,7 @@
 // @effect-diagnostics strictEffectProvide:off
+// @effect-diagnostics unstableApiUsage:off
 // @effect-diagnostics asyncFunction:off
+import { BunHttpServer } from "@effect/platform-bun";
 import {
   CodeHighlighting,
   defaultRenderOptions,
@@ -79,7 +81,7 @@ const readSnapshot = (file: string): Effect.Effect<SourceSnapshot, WatchError> =
  * `preview` binds an OS-assigned port and opens a browser. `dev` binds the one
  * fixed dev-only port and opens nothing, so Vite's proxy can reach it.
  */
-const runServer = (file: string, port: number, open: boolean) =>
+const runServer = (file: string, open: boolean) =>
   Effect.gen(function* () {
     const renderer = yield* Renderer;
     const absolute = resolve(file);
@@ -120,9 +122,9 @@ const runServer = (file: string, port: number, open: boolean) =>
           return yield* Effect.gen(function* () {
             const preview = yield* PreviewSession;
             const handle = yield* startServer({
-              port,
               clientDir,
               localRoot: dirname(absolute),
+              imageRoot: defaultRenderOptions.imageRoot,
               fileName: basename(file),
               title: document.title,
               currentSnapshot: preview.currentSnapshot,
@@ -139,32 +141,48 @@ const runServer = (file: string, port: number, open: boolean) =>
     });
   });
 
-const program = Effect.gen(function* () {
-  const command = parseArgs(process.argv.slice(2));
-  if (command instanceof UsageError) return yield* command;
+const command = parseArgs(process.argv.slice(2));
 
-  switch (command._tag) {
-    case "render":
-      return yield* runRender({ file: command.file, write: (line) => console.log(line) });
-    case "preview":
-      return yield* runServer(command.file, 0, true);
-    case "dev":
-      return yield* runServer(command.file, DEV_PORT, false);
-  }
-}).pipe(
-  Effect.provide(
-    Layer.merge(Renderer.layer.pipe(Layer.provide(CodeHighlighting.layer)), DocumentSession.layer),
-  ),
+const baseLayer = Layer.merge(
+  Renderer.layer.pipe(Layer.provide(CodeHighlighting.layer)),
+  DocumentSession.layer,
 );
 
-const exit = await Effect.runPromiseExit(program);
+const httpLayer = BunHttpServer.layer({
+  hostname: "127.0.0.1",
+  port: command instanceof UsageError || command._tag !== "dev" ? 0 : DEV_PORT,
+});
 
-if (Exit.isFailure(exit)) {
+const failureMessage = async (effect: Effect.Effect<unknown, Error>): Promise<string | null> => {
+  const exit = await Effect.runPromiseExit(effect);
+  if (Exit.isSuccess(exit)) return null;
   const error = Cause.squash(exit.cause);
-  const message =
-    typeof error === "object" && error !== null && "message" in error
-      ? String(error.message)
-      : String(error);
-  console.error(message);
+  return typeof error === "object" && error !== null && "message" in error
+    ? String(error.message)
+    : String(error);
+};
+
+const run = async (): Promise<string | null> => {
+  if (command instanceof UsageError) {
+    return failureMessage(Effect.fail(command).pipe(Effect.provide(baseLayer)));
+  }
+  if (command._tag === "render") {
+    return failureMessage(
+      runRender({ file: command.file, write: (line) => console.log(line) }).pipe(
+        Effect.provide(baseLayer),
+      ),
+    );
+  }
+  return failureMessage(
+    runServer(command.file, command._tag === "preview").pipe(
+      Effect.provide(Layer.merge(baseLayer, httpLayer)),
+    ),
+  );
+};
+
+const failure = await run();
+
+if (failure !== null) {
+  console.error(failure);
   process.exitCode = 1;
 }

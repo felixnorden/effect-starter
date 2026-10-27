@@ -190,6 +190,53 @@ describe("theme styles", () => {
     expect(dark).toMatch(/--color-[a-z-]+:/u);
   });
 
+  it("consumes role variables and no colour literal for fences", () => {
+    const css = readFileSync(path.join(clientDir, "styles.css"), "utf8");
+    const shiki = css.slice(css.indexOf(".shiki"), css.indexOf("}", css.indexOf(".shiki")) + 1);
+    const pre = css.slice(css.indexOf(".preview-body pre"), css.indexOf(".preview-body img"));
+
+    expect(shiki).toContain("background: var(--mdv-background)");
+    expect(shiki).toContain("color: var(--mdv-foreground)");
+    expect(shiki).not.toMatch(COLOUR_LITERAL);
+    expect(pre).not.toContain("--color-code-bg");
+  });
+
+  it("scopes the token rule to the role variables", () => {
+    const css = readFileSync(path.join(clientDir, "styles.css"), "utf8");
+
+    expect(css).not.toContain("--shiki-light");
+    expect(css).not.toContain("--shiki-dark");
+    expect(css).toContain("color: var(--mdv-foreground)");
+  });
+
+  it("numbers lines through a counter scoped to the attribute", () => {
+    const css = readFileSync(path.join(clientDir, "styles.css"), "utf8");
+
+    expect(css).toContain("counter-reset: mdv-line;");
+    expect(css).toContain('[data-line-numbers="on"] .shiki .line::before');
+    expect(css).toContain("counter-increment: mdv-line;");
+    expect(css).toContain("content: counter(mdv-line);");
+  });
+
+  it("paints the gutter from the sheet's role variable", () => {
+    const css = readFileSync(path.join(clientDir, "styles.css"), "utf8");
+    const gutter = css.slice(
+      css.indexOf('[data-line-numbers="on"] .shiki .line::before'),
+      css.indexOf("}", css.indexOf('[data-line-numbers="on"] .shiki .line::before')),
+    );
+
+    expect(gutter).toContain("color: var(--mdv-token-comment)");
+    expect(gutter).not.toContain("--color-muted");
+    expect(gutter).not.toMatch(COLOUR_LITERAL);
+  });
+
+  it("guards the phantom line", () => {
+    const css = readFileSync(path.join(clientDir, "styles.css"), "utf8");
+
+    expect(css).toContain(".shiki .line:last-child:empty::before");
+    expect(css).toContain("genuinely blank final source line");
+  });
+
   it("contains no colour literal outside the theme file", () => {
     const offenders = componentFiles().filter((file) =>
       COLOUR_LITERAL.test(readFileSync(path.join(clientDir, file), "utf8")),
