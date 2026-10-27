@@ -62,3 +62,127 @@ jobs:
 
       - name: Accessibility suite
         run: bun run check:a11y
+
+  # The editor adapters need a repeated check, and the gate stays process-free.
+  # Three blocking jobs: the Vim floor, the Neovim floor, and current versions.
+  # Each asserts its own toolchain first, so a missing feature fails the job
+  # instead of becoming a SKIP.
+  editors-vim-floor:
+    runs-on: ubuntu-latest
+    container: debian:bullseye
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install the Vim floor
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl git vim vim-nox
+          if [ -x /usr/bin/vim.nox ]; then update-alternatives --set vim /usr/bin/vim.nox; fi
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Assert the Vim floor
+        run: |
+          vim --version | grep -E '\+channel.*\+job|\+job.*\+channel'
+          vim --version | grep -q '\+timers'
+          vim -u NONE -N -es -c 'if !has("patch-8.2.1978") | cquit | endif' -c 'qall!' </dev/null
+
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+
+      - name: Editor probe
+        run: bun run editor:probe
+
+      - name: Editor conformance
+        run: bun run editor:conformance
+
+      - name: Editor lifecycle
+        run: bun run editor:lifecycle
+
+  editors-nvim-floor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install the pinned Neovim 0.10.4
+        run: |
+          curl -fsSL -o /tmp/nvim.appimage \
+            https://github.com/neovim/neovim/releases/download/v0.10.4/nvim-linux64.appimage
+          chmod +x /tmp/nvim.appimage
+          cd /tmp && ./nvim.appimage --appimage-extract
+          sudo ln -sf /tmp/squashfs-root/usr/bin/nvim /usr/local/bin/nvim
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Assert the Neovim floor
+        run: nvim --version | head -1
+
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+
+      - name: Editor probe
+        run: bun run editor:probe
+
+      - name: Editor conformance
+        run: bun run editor:conformance
+
+      - name: Editor lifecycle
+        run: bun run editor:lifecycle
+
+  editors-current:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install current Neovim and Vim
+        run: |
+          curl -fsSL -o /tmp/nvim.tar.gz \
+            https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
+          sudo tar -xzf /tmp/nvim.tar.gz -C /opt
+          sudo ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends vim
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Assert the current toolchain
+        run: |
+          nvim --version | head -1
+          vim --version | head -1
+
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+
+      - name: Editor probe
+        run: bun run editor:probe
+
+      - name: Editor conformance
+        run: bun run editor:conformance
+
+      - name: Editor lifecycle
+        run: bun run editor:lifecycle
+
+      - name: Frames and codecs regenerate byte-identically
+        run: |
+          bun run frames:generate
+          git diff --exit-code fixtures/generated/editor-frames \
+            editor/nvim/lua/markdown_viewer/generated \
+            editor/vim/autoload/markdown_viewer/generated

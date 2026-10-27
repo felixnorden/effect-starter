@@ -107,8 +107,8 @@ const rawPathOf = (url: string): string => url.split("?")[0] ?? "/";
 
 export type ServerOptions = {
   readonly clientDir: string;
-  /** The source file's directory: the sole allowed root for `/local/*`. */
-  readonly localRoot: string;
+  /** The source file's directory: the sole allowed root for `/local/*`. `null` means the route answers 404. */
+  readonly localRoot: string | null;
   /** The one configured image root; `null` means the route exists but answers 404. */
   readonly imageRoot: string | null;
   readonly fileName: string;
@@ -255,6 +255,7 @@ export const startServer = (
 
       if (rawPath === "/ws") return yield* serveWebSocket(request, hub, frameDeps);
       if (rawPath.startsWith("/local/")) {
+        if (options.localRoot === null) return notFound();
         return yield* serveFromRoot(options.localRoot, rawPath, "/local/");
       }
       if (rawPath.startsWith("/image-root/")) {

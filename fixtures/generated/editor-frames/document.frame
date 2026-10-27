@@ -1,0 +1,1 @@
+{"_tag":"document","editorProtocolVersion":1,"path":"fixtures/kitchen-sink.md","text":"# Kitchen Sink\n\nA UTF-8 line with é, —, and a tab\t.\nA control byte \u0007 stays escaped in the frame.\nA newline inside the text stays escaped in the frame.\n"}

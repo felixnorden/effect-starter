@@ -13,6 +13,18 @@
     "./protocol": {
       "types": "./src/protocol.ts",
       "default": "./src/protocol.ts"
+    },
+    "./editor-protocol": {
+      "types": "./src/editor-protocol.ts",
+      "default": "./src/editor-protocol.ts"
+    },
+    "./editor-frame": {
+      "types": "./src/editor-frame.ts",
+      "default": "./src/editor-frame.ts"
+    },
+    "./log-directory": {
+      "types": "./src/log-directory.ts",
+      "default": "./src/log-directory.ts"
     }
   },
   "scripts": {

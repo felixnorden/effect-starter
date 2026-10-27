@@ -1,0 +1,111 @@
+{
+  "cases": [
+    {
+      "file": "document.frame",
+      "message": {
+        "_tag": "document",
+        "editorProtocolVersion": 1,
+        "path": "fixtures/kitchen-sink.md",
+        "text": "# Kitchen Sink\n\nA UTF-8 line with é, —, and a tab\t.\nA control byte \u0007 stays escaped in the frame.\nA newline inside the text stays escaped in the frame.\n"
+      },
+      "name": "document",
+      "tag": "document"
+    },
+    {
+      "file": "document-empty-path.frame",
+      "message": {
+        "_tag": "document",
+        "editorProtocolVersion": 1,
+        "path": "",
+        "text": "# Empty path\n"
+      },
+      "name": "document-empty-path",
+      "tag": "document"
+    },
+    {
+      "file": "error.frame",
+      "message": {
+        "_tag": "error",
+        "editorProtocolVersion": 1,
+        "message": "invalid editor frame",
+        "stage": "protocol"
+      },
+      "name": "error",
+      "tag": "error"
+    },
+    {
+      "file": "error-version-mismatch.frame",
+      "message": {
+        "_tag": "error",
+        "clientVersion": 2,
+        "editorProtocolVersion": 1,
+        "message": "editor protocol version mismatch: client 2, server 1",
+        "serverVersion": 1,
+        "stage": "protocol"
+      },
+      "name": "error-version-mismatch",
+      "tag": "error"
+    },
+    {
+      "file": "ready.frame",
+      "message": {
+        "_tag": "ready",
+        "editorProtocolVersion": 1,
+        "sessionId": "0f8fad5b-d9cb-469f-a165-70867728950e",
+        "url": "http://127.0.0.1:4321/"
+      },
+      "name": "ready",
+      "tag": "ready"
+    }
+  ],
+  "editorProtocolVersion": 1,
+  "fields": {
+    "document": [
+      "_tag",
+      "editorProtocolVersion",
+      "path",
+      "text"
+    ],
+    "error": [
+      "_tag",
+      "editorProtocolVersion",
+      "stage",
+      "message",
+      "clientVersion",
+      "serverVersion"
+    ],
+    "ready": [
+      "_tag",
+      "editorProtocolVersion",
+      "sessionId",
+      "url"
+    ]
+  },
+  "frameTerminator": 10,
+  "maxFrameBytes": 67108864,
+  "optionalFields": {
+    "document": [],
+    "error": [
+      "clientVersion",
+      "serverVersion"
+    ],
+    "ready": []
+  },
+  "stages": [
+    "bind",
+    "protocol",
+    "render",
+    "client"
+  ],
+  "tags": [
+    "document",
+    "ready",
+    "error"
+  ],
+  "versionMismatch": {
+    "clientVersion": 2,
+    "file": "version-mismatch.frame",
+    "message": "editor protocol version mismatch",
+    "serverVersion": 1
+  }
+}

@@ -27,10 +27,11 @@ One render pipeline serves preview, HTML export, and PDF export. Editor adapters
 ## 1.1 Implementation status
 
 Updated 2026-10-27. This records the renderer completion plan in
-`.qrspi/plans/20261025-renderer-completion.md`, on top of the earlier live
-preview slice in `.qrspi/plans/20261025-feat-preview.md`. It is not the v1
-release gate: the editor adapter, scroll sync, export, auth, packaging, and most
-accessibility work are still unbuilt.
+`.qrspi/plans/20261025-renderer-completion.md` and the editor adapter plan in
+`.qrspi/plans/20261027-editor-adapter.md`, on top of the earlier live preview
+slice in `.qrspi/plans/20261025-feat-preview.md`. It is not the v1 release gate:
+scroll sync, export, auth, packaging, and most accessibility work are still
+unbuilt.
 
 | Status      | Meaning                                                                |
 | ----------- | ---------------------------------------------------------------------- |
@@ -41,9 +42,12 @@ accessibility work are still unbuilt.
 | Partial     | Code exists, but the requirement's own check is not met.               |
 | Not started | No implementation.                                                     |
 
-Commands: `bun run check` (239 core tests, 174 preview tests), `bun run check:a11y`
+Commands: `bun run check` (258 core tests, 209 preview tests), `bun run check:a11y`
 (12 browser tests, outside the gate), `bun run render fixtures/kitchen-sink.md`,
 `bun run bench`, `bunx playwright install chromium && bun run bench:browser`.
+Editor evidence runs beside the gate: `bun run editor:probe`,
+`bun run editor:conformance`, `bun run editor:lifecycle`, `bun run editor:bench`,
+and `bun run check:pointers`.
 
 ### Done
 
@@ -79,6 +83,10 @@ Commands: `bun run check` (239 core tests, 174 preview tests), `bun run check:a1
 | AS-3  | Under `allowRemote: false` a remote image becomes a placeholder with no request-bearing attribute; the browser records zero non-local requests and one placeholder per image.                                                                                                     | `render/assets.test.ts`, `e2e/remote-images.spec.ts`                                                                                                                                                                                         |
 | AS-5  | Core and the page build the same placeholder from `fixtures/placeholder-cases.json`; the box keeps the declared size and the authored `alt` names it.                                                                                                                             | `render/assets.test.ts`, `client/placeholder.test.ts`, `e2e-a11y/placeholder.spec.ts` (120x80 box)                                                                                                                                           |
 | TH-3  | One mode-scoped sheet per offerable theme is derived from bundled Shiki data; code markup names only `--mdv-token-*` variables, and selecting a light or dark theme repaints both modes without a navigation or a block replacement.                                              | `render/theme-sheets.test.ts`, `theme-options.test.ts`, `e2e-a11y/themes.spec.ts`; `bun run themes:generate` drift check. Boundary: each selector offers only its own mode                                                                   |
+| ED-1  | `:MarkdownPreview`, `:MarkdownPreviewStop`, and `:MarkdownPreviewToggle` exist in Neovim and Vim, with normal-mode and insert-mode `<Plug>` maps through `<Cmd>`. `:MarkdownPreview` on an open row sends the buffer again.                                                       | `editor/nvim/tests/conformance.lua`, `editor/vim/tests/conformance.vim`, `editor/nvim/lua/markdown_viewer/session.lua`, `editor/vim/autoload/markdown_viewer/session.vim`; recorded walkthroughs. Boundary: no filetype gate yet (ED-2)      |
+| ED-9  | First preview starts one server as a job; stop closes standard input and ends the process; quitting the editor closes the stream and leaves no process.                                                                                                                           | `scripts/editor-lifecycle.ts`, both adapter conformance runs, the three `editors` CI jobs, recorded walkthroughs                                                                                                                             |
+| ED-12 | A failed start, a dead server, or a version mismatch produces one message; a start failure names the log path and the editor stays responsive.                                                                                                                                    | `packages/app/src/editor-session.test.ts`, `scripts/editor-lifecycle.ts`, both adapter walkthroughs                                                                                                                                          |
+| PT-9  | The editor RPC is one compact JSON line per frame, versioned by `EDITOR_PROTOCOL_VERSION`; logs go to a file, never the frame stream; a mismatch reports both versions and ends the process.                                                                                      | `editor-frame.test.ts`, `editor-session.test.ts`, `log-sink.test.ts`, `scripts/editor-lifecycle.ts`                                                                                                                                          |
 
 ### Narrowed
 
@@ -90,12 +98,15 @@ Commands: `bun run check` (239 core tests, 174 preview tests), `bun run check:a1
 
 ### Measured
 
-| ID    | Measured                                                                                                                                   | Budget             | Verdict                                            |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ | -------------------------------------------------- |
-| PF-3  | First paint 69 ms p95 with a warm browser; the baseline was re-recorded at 69 ms.                                                          | 700 ms; 2 s launch | Pass for the warm clause; launch clause unmeasured |
-| PF-5  | 1 MB paint 414 ms p95; 1 MB update 49 ms p95.                                                                                              | 2500 ms; 250 ms    | Pass                                               |
-| PF-7  | Initial JS 94.0 KB gzip; CSS 8.6 KB gzip; 11 theme sheets 1.0 KB gzip total.                                                               | 200 KB; 500 KB     | Pass; KaTeX fonts are separate files               |
-| PF-10 | p95 within baseline × 1.2 in `bench:browser` on the recording machine. The baseline was re-recorded after PF-5 paint moved +12 % (414 ms). | baseline × 1.2     | Pass locally; no CI job                            |
+| ID             | Measured                                                                                                                                                                                                                   | Budget             | Verdict                                             |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | --------------------------------------------------- |
+| PF-3           | First paint 69 ms p95 with a warm browser; the baseline was re-recorded at 69 ms.                                                                                                                                          | 700 ms; 2 s launch | Pass for the warm clause; launch clause unmeasured  |
+| PF-5           | 1 MB paint 414 ms p95; 1 MB update 49 ms p95.                                                                                                                                                                              | 2500 ms; 250 ms    | Pass                                                |
+| PF-7           | Initial JS 94.0 KB gzip; CSS 8.6 KB gzip; 11 theme sheets 1.0 KB gzip total.                                                                                                                                               | 200 KB; 500 KB     | Pass; KaTeX fonts are separate files                |
+| PF-10          | p95 within baseline × 1.2 in `bench:browser` on the recording machine. The baseline was re-recorded after PF-5 paint moved +12 % (414 ms).                                                                                 | baseline × 1.2     | Pass locally; no CI job                             |
+| PF-1           | `nvim --startuptime` median 6.653 ms without the plugin and 7.410 ms with it, delta 0.757 ms over 10 runs; no server process exists before the first command. Machine: Apple M1 Max, macOS 25.6.0 arm64; commit `4f003d5`. | 10 ms              | Pass                                                |
+| PF-2           | Spawn to the server's bind line p50 209 ms, p95 211 ms over 20 runs. Machine: Apple M1 Max, macOS 25.6.0 arm64; commit `4f003d5`.                                                                                          | 300 ms p95         | Pass; the bind line carries epoch ms and no address |
+| PF-2 (finding) | Spawn to `ready` over the same 20 runs p50 1398 ms, p95 1404 ms, dominated by the 1143 ms first render. Not a budget.                                                                                                      | finding, no budget | Recorded; PF-2 measures spawn to bind               |
 
 Reference fixture render medians: kitchen-sink 3.3 ms, 100 KB 19.0 ms, 1 MB
 143.7 ms. A 1 MB patch is 0.5 KB; its snapshot is 3.6 MB.
@@ -120,24 +131,27 @@ inline `--shiki-*` pairs from every code block.
 
 ### Partial
 
-| ID   | Exists                                                                  | Missing                                              |
-| ---- | ----------------------------------------------------------------------- | ---------------------------------------------------- |
-| SE-6 | File roots enforced on the HTTP asset route.                            | Export and link resolution do not exist yet.         |
-| SE-7 | The browser opens with an argv list, never a shell string.              | File links do not open yet.                          |
-| VF-1 | Renderer, protocol codecs, and path resolution have unit tests.         | Config mapping and PDF options do not exist yet.     |
-| VF-3 | Playwright covers preview, edit, theme switch, and scroll preservation. | Scroll sync, reconnect, and export do not exist yet. |
+| ID   | Exists                                                                                                                                                                          | Missing                                                                                                                                 |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| SE-6 | File roots enforced on the HTTP asset route.                                                                                                                                    | Export and link resolution do not exist yet.                                                                                            |
+| SE-7 | The browser opens with an argv list, never a shell string.                                                                                                                      | File links do not open yet.                                                                                                             |
+| VF-1 | Renderer, protocol codecs, and path resolution have unit tests.                                                                                                                 | Config mapping and PDF options do not exist yet.                                                                                        |
+| VF-3 | Playwright covers preview, edit, theme switch, and scroll preservation.                                                                                                         | Scroll sync, reconnect, and export do not exist yet.                                                                                    |
+| VF-2 | `editor-session.test.ts` runs the frame loop, the start order, and every lifecycle path with injected streams and no editor; `scripts/editor-lifecycle.ts` runs a real process. | The adapter conformance runs in the three `editors` CI jobs and locally, not in `bun run check`.                                        |
+| VF-9 | The hand-written tag, field, and version table in `editor-protocol.test.ts` fails a schema edit, and the golden frames pin the bytes.                                           | A regenerate plus an unbumped `EDITOR_PROTOCOL_VERSION` stays a review rule; the table catches the schema change, not the missing bump. |
+| SE-8 | The log sink caps the file and the lifecycle grep finds no document text or page address.                                                                                       | Rotation and cleanup wait for OP-7; the directory keeps one file per process.                                                           |
 
 ### Not started
 
-- **Editor integration:** ED-1 to ED-13, CF-1 to CF-7.
+- **Editor integration:** ED-2 to ED-8, ED-10, ED-11, ED-13, CF-1 to CF-7.
 - **Rendering:** RD-5 (diagrams), RD-15 (plugins).
 - **Scroll sync:** SS-1 to SS-9.
 - **Theming and export:** TH-4 to TH-9, EX-1 to EX-10.
-- **Assets and protocol:** AS-4, AS-7, PT-5, PT-6, PT-9, PT-10.
-- **Performance:** PF-1, PF-2, PF-8, PF-9.
-- **Security:** SE-1, SE-2, SE-4, SE-5, SE-8, SE-9, SE-10, SE-11.
+- **Assets and protocol:** AS-4, AS-7, PT-5, PT-6, PT-10.
+- **Performance:** PF-8, PF-9.
+- **Security:** SE-1, SE-2, SE-4, SE-5, SE-9, SE-10, SE-11.
 - **Packaging and accessibility:** OP-1 to OP-9, AR-2, AR-4, AR-5, AR-6.
-- **Verification:** VF-2, VF-4, VF-5, VF-6, VF-8.
+- **Verification:** VF-4, VF-5, VF-6, VF-8.
 
 Recorded assumptions from this slice:
 
@@ -147,6 +161,25 @@ Recorded assumptions from this slice:
 - The 2 s browser-launch clause in PF-3 is unmeasured; the bench uses a warm browser.
 - `fs.watch` is verified on macOS only; directory watch, debounce, re-read, and hash filtering make event differences a latency cost, not a correctness one.
 - Cursor-only updates, theme selection, and browser history stay out of scope for this slice.
+
+Editor adapter boundaries:
+
+- The page protocol is unchanged: `PROTOCOL_VERSION` stays `1` and every page
+  golden string is byte-identical. The editor message set carries its own
+  `EDITOR_PROTOCOL_VERSION`, so no page client breaks and no page message gained a
+  field.
+- The floor is Vim 8.2.1978 and Neovim 0.10.4, measured in the three `editors`
+  CI jobs. Locally the probe reports `has('patch-8.2.1978')` = `1` on Vim 9.2 and
+  Neovim 0.12.6; both codecs round-trip a golden frame and a 1 MB document.
+- Not tested by this slice: no editor runs inside `bun run check`; no formatter
+  or linter reads `.lua` or `.vim`; Windows pipe and job semantics are unverified;
+  the log directory accumulates one file per process until OP-7; the baseline
+  `<Plug>` spelling is unverified offline (CF-2); Vim's decoder drops `\u0000`, so
+  no frame carries a NUL; editor support works only from a repository checkout
+  until OP-1 and OP-3 land; and the local root is fixed at the first document's
+  path, so a later path keeps correct text and a stale image root.
+- No dependency was added: the wire uses the repository's JSON codec and root
+  scripts import core by relative source path.
 
 ## 2. Baseline analysis
 

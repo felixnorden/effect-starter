@@ -153,16 +153,19 @@ describe("startServer asset routes", () => {
   const withServer = <A>(
     imageRoot: string | null,
     use: (url: string) => Effect.Effect<A>,
+    localRoot?: string | null,
   ): Promise<A> => {
     const clientDir = makeRoot();
     writeFileSync(join(clientDir, "index.html"), "page");
-    const localRoot = makeRoot();
-    writeFileSync(join(localRoot, "pixel.png"), "png");
+    const boundLocalRoot = localRoot === undefined ? makeRoot() : localRoot;
+    if (boundLocalRoot !== null) {
+      writeFileSync(join(boundLocalRoot, "pixel.png"), "png");
+    }
     return Effect.runPromise(
       Effect.gen(function* () {
         const handle = yield* startServer({
           clientDir,
-          localRoot,
+          localRoot: boundLocalRoot,
           imageRoot,
           fileName: "a.md",
           title: null,
@@ -194,6 +197,16 @@ describe("startServer asset routes", () => {
 
     expect(response.status).toBe(404);
     expect(await response.text()).toBe("Not found");
+  });
+
+  it("answers 404 for /local/ when an editor session has no local root", async () => {
+    const response = await withServer(
+      null,
+      (url) => Effect.promise(() => fetch(new URL("local/anything.md", url))),
+      null,
+    );
+
+    expect(response.status).toBe(404);
   });
 
   it("answers 404 for an unknown root segment", async () => {
