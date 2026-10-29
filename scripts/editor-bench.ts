@@ -25,7 +25,7 @@ import {
 } from "./editor-process.ts";
 
 const dir = mkdtempSync(path.join(tmpdir(), "mdv-editor-bench-"));
-const pluginDir = path.join(root, "editor/nvim");
+const pluginDir = path.join(root, "packages/editor/nvim");
 const kitchenSink = readFileSync(path.join(root, "fixtures/kitchen-sink.md"), "utf8");
 
 const median = (values: readonly number[]): number => {

@@ -1,9 +1,9 @@
 " Read the committed golden frames and the 1 MB fixture through the generated
 " Vim codec. Print one line per fact; exit non-zero on the first mismatch.
 " The runner is `scripts/editor-probe.ts`.
-let s:root = expand('<sfile>:p:h:h:h')
+let s:root = expand('<sfile>:p:h:h:h:h')
 let s:frames = s:root . '/fixtures/generated/editor-frames'
-let &runtimepath = s:root . '/editor/vim,' . &runtimepath
+let &runtimepath = s:root . '/packages/editor/vim,' . &runtimepath
 
 function! s:Out(line) abort
   " Ex mode has no stdout echo; /dev/stdout is the portable Unix answer. The

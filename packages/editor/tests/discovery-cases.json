@@ -3,10 +3,12 @@
     {
       "name": "configured hit",
       "configured": "/opt/mdv/bin/mdv",
-      "plugin_dir": "/repo/editor/nvim",
+      "plugin_dir": "/repo/packages/editor/nvim",
       "os": "linux",
       "arch": "x64",
-      "existing": ["/opt/mdv/bin/mdv"],
+      "existing": [
+        "/opt/mdv/bin/mdv"
+      ],
       "realpath": {},
       "expect": {
         "ok": true,
@@ -16,35 +18,42 @@
     },
     {
       "name": "platform binary hit",
-      "plugin_dir": "/repo/editor/nvim",
+      "plugin_dir": "/repo/packages/editor/nvim",
       "os": "linux",
       "arch": "x64",
-      "existing": ["/repo/editor/nvim/bin/mdv-linux-x64"],
+      "existing": [
+        "/repo/packages/editor/nvim/bin/mdv-linux-x64"
+      ],
       "realpath": {},
       "expect": {
         "ok": true,
-        "command": "/repo/editor/nvim/bin/mdv-linux-x64",
+        "command": "/repo/packages/editor/nvim/bin/mdv-linux-x64",
         "args": []
       }
     },
     {
       "name": "bun fallback through a symlinked plugin directory",
-      "plugin_dir": "/tmp/link/editor/nvim",
+      "plugin_dir": "/tmp/link/packages/editor/nvim",
       "os": "linux",
       "arch": "x64",
-      "existing": ["bun", "/repo/packages/app/src/main.ts"],
+      "existing": [
+        "bun",
+        "/repo/packages/app/src/main.ts"
+      ],
       "realpath": {
-        "/tmp/link/editor/nvim": "/repo/editor/nvim"
+        "/tmp/link/packages/editor/nvim": "/repo/packages/editor/nvim"
       },
       "expect": {
         "ok": true,
         "command": "bun",
-        "args": ["/repo/packages/app/src/main.ts"]
+        "args": [
+          "/repo/packages/app/src/main.ts"
+        ]
       }
     },
     {
       "name": "all three missing",
-      "plugin_dir": "/repo/editor/nvim",
+      "plugin_dir": "/repo/packages/editor/nvim",
       "os": "linux",
       "arch": "x64",
       "existing": [],
@@ -52,7 +61,7 @@
       "expect": {
         "ok": false,
         "contains": [
-          "/repo/editor/nvim/bin/mdv-linux-x64",
+          "/repo/packages/editor/nvim/bin/mdv-linux-x64",
           "bun",
           "packages/app/src/main.ts",
           "g:markdown_viewer_server"
@@ -62,14 +71,17 @@
     {
       "name": "shell metacharacters stay data",
       "configured": "/tmp/mdv; touch /tmp/pwned $(id)",
-      "plugin_dir": "/repo/editor/nvim",
+      "plugin_dir": "/repo/packages/editor/nvim",
       "os": "linux",
       "arch": "x64",
       "existing": [],
       "realpath": {},
       "expect": {
         "ok": false,
-        "contains": ["$(id)", "touch /tmp/pwned"]
+        "contains": [
+          "$(id)",
+          "touch /tmp/pwned"
+        ]
       }
     }
   ]

@@ -53,20 +53,20 @@ const runners: readonly Runner[] = [
   {
     label: "nvim",
     binary: "nvim",
-    adapter: path.join(root, "editor/nvim/tests/conformance.lua"),
+    adapter: path.join(root, "packages/editor/nvim/tests/conformance.lua"),
     command: [
       "nvim",
       "--headless",
       "-u",
       "NONE",
       "-l",
-      path.join(root, "editor/nvim/tests/conformance.lua"),
+      path.join(root, "packages/editor/nvim/tests/conformance.lua"),
     ],
   },
   {
     label: "vim",
     binary: "vim",
-    adapter: path.join(root, "editor/vim/tests/conformance.vim"),
+    adapter: path.join(root, "packages/editor/vim/tests/conformance.vim"),
     command: [
       "vim",
       "-u",
@@ -74,7 +74,7 @@ const runners: readonly Runner[] = [
       "-N",
       "-es",
       "-S",
-      path.join(root, "editor/vim/tests/conformance.vim"),
+      path.join(root, "packages/editor/vim/tests/conformance.vim"),
     ],
   },
 ];

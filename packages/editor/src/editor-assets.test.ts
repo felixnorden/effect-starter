@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const root = fileURLToPath(new URL("../../../", import.meta.url));
+const root = fileURLToPath(new URL("../", import.meta.url));
 
 const files = (dir: string): readonly string[] =>
   existsSync(dir)
@@ -14,8 +14,8 @@ const files = (dir: string): readonly string[] =>
       })
     : [];
 
-const nvimFiles = (): readonly string[] => files(path.join(root, "editor/nvim"));
-const vimFiles = (): readonly string[] => files(path.join(root, "editor/vim"));
+const nvimFiles = (): readonly string[] => files(path.join(root, "nvim"));
+const vimFiles = (): readonly string[] => files(path.join(root, "vim"));
 
 const read = (relative: string): string => readFileSync(path.join(root, relative), "utf8");
 
@@ -47,21 +47,21 @@ const versionUnder = (text: string, marker: RegExp): number | null => {
 describe("editor assets", () => {
   it("has every Neovim module and calls the generated codec", () => {
     const required = [
-      "editor/nvim/plugin/markdown_viewer.lua",
-      "editor/nvim/lua/markdown_viewer/session.lua",
-      "editor/nvim/lua/markdown_viewer/frames.lua",
-      "editor/nvim/lua/markdown_viewer/discovery.lua",
-      "editor/nvim/lua/markdown_viewer/messages.lua",
-      "editor/nvim/lua/markdown_viewer/generated/wire.lua",
-      "editor/nvim/lua/markdown_viewer/generated/codec.lua",
+      "nvim/plugin/markdown_viewer.lua",
+      "nvim/lua/markdown_viewer/session.lua",
+      "nvim/lua/markdown_viewer/frames.lua",
+      "nvim/lua/markdown_viewer/discovery.lua",
+      "nvim/lua/markdown_viewer/messages.lua",
+      "nvim/lua/markdown_viewer/generated/wire.lua",
+      "nvim/lua/markdown_viewer/generated/codec.lua",
     ];
 
     for (const file of required) {
       expect(existsSync(path.join(root, file)), file).toBe(true);
     }
 
-    const session = read("editor/nvim/lua/markdown_viewer/session.lua");
-    const frames = read("editor/nvim/lua/markdown_viewer/frames.lua");
+    const session = read("nvim/lua/markdown_viewer/session.lua");
+    const frames = read("nvim/lua/markdown_viewer/frames.lua");
 
     expect(session).toContain('require("markdown_viewer.generated.codec")');
     for (const text of [session, frames]) {
@@ -72,7 +72,7 @@ describe("editor assets", () => {
   });
 
   it("defines the three commands, six maps, and no version literal", () => {
-    const plugin = read("editor/nvim/plugin/markdown_viewer.lua");
+    const plugin = read("nvim/plugin/markdown_viewer.lua");
     const commands = ["MarkdownPreview", "MarkdownPreviewStop", "MarkdownPreviewToggle"];
 
     for (const command of commands) {
@@ -90,20 +90,20 @@ describe("editor assets", () => {
 
   it("has every Vim module and calls the generated codec", () => {
     const required = [
-      "editor/vim/plugin/markdown_viewer.vim",
-      "editor/vim/autoload/markdown_viewer/session.vim",
-      "editor/vim/autoload/markdown_viewer/frames.vim",
-      "editor/vim/autoload/markdown_viewer/discovery.vim",
-      "editor/vim/autoload/markdown_viewer/messages.vim",
-      "editor/vim/autoload/markdown_viewer/generated/wire.vim",
-      "editor/vim/autoload/markdown_viewer/generated/codec.vim",
+      "vim/plugin/markdown_viewer.vim",
+      "vim/autoload/markdown_viewer/session.vim",
+      "vim/autoload/markdown_viewer/frames.vim",
+      "vim/autoload/markdown_viewer/discovery.vim",
+      "vim/autoload/markdown_viewer/messages.vim",
+      "vim/autoload/markdown_viewer/generated/wire.vim",
+      "vim/autoload/markdown_viewer/generated/codec.vim",
     ];
 
     for (const file of required) {
       expect(existsSync(path.join(root, file)), file).toBe(true);
     }
 
-    const frames = read("editor/vim/autoload/markdown_viewer/frames.vim");
+    const frames = read("vim/autoload/markdown_viewer/frames.vim");
     expect(frames).toContain("markdown_viewer#generated#codec#");
 
     const handWrittenFiles = vimModules();
@@ -116,8 +116,8 @@ describe("editor assets", () => {
   });
 
   it("keeps both adapters on the same generated names", () => {
-    const lua = read("editor/nvim/lua/markdown_viewer/generated/wire.lua");
-    const vim = read("editor/vim/autoload/markdown_viewer/generated/wire.vim");
+    const lua = read("nvim/lua/markdown_viewer/generated/wire.lua");
+    const vim = read("vim/autoload/markdown_viewer/generated/wire.vim");
 
     const luaTags = tagsUnder(lua, /M\.tags = \{[^}]*\}/);
     const vimTags = tagsUnder(vim, /'tags': \[[^\]]*\]/);
@@ -129,7 +129,7 @@ describe("editor assets", () => {
   });
 
   it("defines the same three commands and six maps in Vim, with no version literal", () => {
-    const plugin = read("editor/vim/plugin/markdown_viewer.vim");
+    const plugin = read("vim/plugin/markdown_viewer.vim");
     const commands = ["MarkdownPreview", "MarkdownPreviewStop", "MarkdownPreviewToggle"];
 
     for (const command of commands) {

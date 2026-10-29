@@ -1,0 +1,22 @@
+{
+  "name": "@mdv/editor",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Neovim and Vim preview adapters, their shared harness, and the generated codecs",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "check:types": "bun src/check-codec.ts && tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mdv/core": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/tsgo": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

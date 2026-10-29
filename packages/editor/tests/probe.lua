@@ -2,7 +2,7 @@
 -- Neovim codec. Print one line per fact; exit non-zero on the first mismatch.
 -- The runner is `scripts/editor-probe.ts`.
 local source = debug.getinfo(1, "S").source:sub(2)
-local root = vim.fn.fnamemodify(source, ":p:h:h:h")
+local root = vim.fn.fnamemodify(source, ":p:h:h:h:h")
 local frames_dir = root .. "/fixtures/generated/editor-frames"
 
 local function out(line)

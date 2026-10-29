@@ -15,10 +15,10 @@ const framesDir = fileURLToPath(
   new URL("../../../fixtures/generated/editor-frames/", import.meta.url),
 );
 const nvimGenerated = fileURLToPath(
-  new URL("../../../editor/nvim/lua/markdown_viewer/generated/", import.meta.url),
+  new URL("../../../packages/editor/nvim/lua/markdown_viewer/generated/", import.meta.url),
 );
 const vimGenerated = fileURLToPath(
-  new URL("../../../editor/vim/autoload/markdown_viewer/generated/", import.meta.url),
+  new URL("../../../packages/editor/vim/autoload/markdown_viewer/generated/", import.meta.url),
 );
 
 type GoldenCase = {

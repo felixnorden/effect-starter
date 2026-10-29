@@ -58,9 +58,9 @@ if (nvim === null) {
       nvim,
       "--headless",
       "-u",
-      path.join(root, "editor/tests/minimal.lua"),
+      path.join(root, "packages/editor/tests/minimal.lua"),
       "-l",
-      path.join(root, "editor/tests/probe.lua"),
+      path.join(root, "packages/editor/tests/probe.lua"),
     ]) || failed;
 }
 
@@ -76,7 +76,7 @@ if (vim === null) {
       "-N",
       "-es",
       "-S",
-      path.join(root, "editor/tests/probe.vim"),
+      path.join(root, "packages/editor/tests/probe.vim"),
     ]) || failed;
 }
 

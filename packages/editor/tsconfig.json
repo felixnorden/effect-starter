@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/@effect/tsgo/schema.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ESNext"],
+    "types": ["node"],
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    // The Effect language service. `effect-tsgo patch` in the root `postinstall`
+    // script wires this into `tsc`, so `bun run check:types` reports Effect
+    // diagnostics and the editor gets the same quick fixes.
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "allowedUnstableApis": ["@effect/vitest#it", "@effect/vitest#layer"],
+        "diagnosticSeverity": {
+          "strictEffectProvide": "warning",
+          "preferSchemaOverJson": "warning",
+          "floatingEffect": "error",
+          "catchAllTagDispatchToCatchTag": "warning",
+          "asyncFunction": "warning"
+        },
+        "ignoreEffectErrorsInTscExitCode": false
+      }
+    ]
+  },
+  "include": ["src", "*.ts", "../../scripts/generate-editor-frames.ts"]
+}
