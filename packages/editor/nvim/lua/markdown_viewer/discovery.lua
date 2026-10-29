@@ -56,14 +56,20 @@ function M.find(options)
     attempts[#attempts + 1] = configured
   end
 
-  local binary = plugin_dir .. "/bin/mdv-" .. os .. "-" .. arch
-  if exists(binary) then
-    return { ok = true, command = binary, args = {} }
+  local shared = vim.fn.simplify(plugin_dir .. "/../bin")
+  for _, base in ipairs({ plugin_dir .. "/bin", shared }) do
+    local binary = base .. "/mdv-" .. os .. "-" .. arch
+    local candidates = os == "win32" and { binary .. ".exe", binary } or { binary }
+    for _, candidate in ipairs(candidates) do
+      if exists(candidate) then
+        return { ok = true, command = candidate, args = {} }
+      end
+      attempts[#attempts + 1] = candidate
+    end
   end
-  attempts[#attempts + 1] = binary
 
-  -- A repository checkout: the plugin sits at <root>/editor/nvim.
-  local entry = vim.fn.simplify(plugin_dir .. "/../../packages/app/src/main.ts")
+  -- A repository checkout: the plugin sits at <root>/packages/editor/nvim.
+  local entry = vim.fn.simplify(plugin_dir .. "/../../../packages/app/src/main.ts")
   if exists("bun") and exists(entry) then
     return { ok = true, command = "bun", args = { entry } }
   end

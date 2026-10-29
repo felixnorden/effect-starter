@@ -6,9 +6,7 @@
       "plugin_dir": "/repo/packages/editor/nvim",
       "os": "linux",
       "arch": "x64",
-      "existing": [
-        "/opt/mdv/bin/mdv"
-      ],
+      "existing": ["/opt/mdv/bin/mdv"],
       "realpath": {},
       "expect": {
         "ok": true,
@@ -21,9 +19,7 @@
       "plugin_dir": "/repo/packages/editor/nvim",
       "os": "linux",
       "arch": "x64",
-      "existing": [
-        "/repo/packages/editor/nvim/bin/mdv-linux-x64"
-      ],
+      "existing": ["/repo/packages/editor/nvim/bin/mdv-linux-x64"],
       "realpath": {},
       "expect": {
         "ok": true,
@@ -32,23 +28,44 @@
       }
     },
     {
+      "name": "shared binary hit",
+      "plugin_dir": "/repo/packages/editor/nvim",
+      "os": "linux",
+      "arch": "x64",
+      "existing": ["/repo/packages/editor/bin/mdv-linux-x64"],
+      "realpath": {},
+      "expect": {
+        "ok": true,
+        "command": "/repo/packages/editor/bin/mdv-linux-x64",
+        "args": []
+      }
+    },
+    {
+      "name": "windows executable hit",
+      "plugin_dir": "/repo/packages/editor/nvim",
+      "os": "win32",
+      "arch": "x64",
+      "existing": ["/repo/packages/editor/nvim/bin/mdv-win32-x64.exe"],
+      "realpath": {},
+      "expect": {
+        "ok": true,
+        "command": "/repo/packages/editor/nvim/bin/mdv-win32-x64.exe",
+        "args": []
+      }
+    },
+    {
       "name": "bun fallback through a symlinked plugin directory",
       "plugin_dir": "/tmp/link/packages/editor/nvim",
       "os": "linux",
       "arch": "x64",
-      "existing": [
-        "bun",
-        "/repo/packages/app/src/main.ts"
-      ],
+      "existing": ["bun", "/repo/packages/app/src/main.ts"],
       "realpath": {
         "/tmp/link/packages/editor/nvim": "/repo/packages/editor/nvim"
       },
       "expect": {
         "ok": true,
         "command": "bun",
-        "args": [
-          "/repo/packages/app/src/main.ts"
-        ]
+        "args": ["/repo/packages/app/src/main.ts"]
       }
     },
     {
@@ -78,10 +95,7 @@
       "realpath": {},
       "expect": {
         "ok": false,
-        "contains": [
-          "$(id)",
-          "touch /tmp/pwned"
-        ]
+        "contains": ["$(id)", "touch /tmp/pwned"]
       }
     }
   ]

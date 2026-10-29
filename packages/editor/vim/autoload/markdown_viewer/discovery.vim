@@ -64,13 +64,19 @@ function! markdown_viewer#discovery#find(options) abort
     call add(l:attempts, l:configured)
   endif
 
-  let l:binary = l:plugin_dir . '/bin/mdv-' . l:os . '-' . l:arch
-  if l:Exists(l:binary)
-    return {'ok': 1, 'command': l:binary, 'args': []}
-  endif
-  call add(l:attempts, l:binary)
+  let l:shared = simplify(l:plugin_dir . '/../bin')
+  for l:base in [l:plugin_dir . '/bin', l:shared]
+    let l:binary = l:base . '/mdv-' . l:os . '-' . l:arch
+    let l:candidates = l:os ==# 'win32' ? [l:binary . '.exe', l:binary] : [l:binary]
+    for l:candidate in l:candidates
+      if l:Exists(l:candidate)
+        return {'ok': 1, 'command': l:candidate, 'args': []}
+      endif
+      call add(l:attempts, l:candidate)
+    endfor
+  endfor
 
-  let l:entry = simplify(l:plugin_dir . '/../../packages/app/src/main.ts')
+  let l:entry = simplify(l:plugin_dir . '/../../../packages/app/src/main.ts')
   if l:Exists('bun') && l:Exists(l:entry)
     return {'ok': 1, 'command': 'bun', 'args': [l:entry]}
   endif

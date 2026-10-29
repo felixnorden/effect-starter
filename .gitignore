@@ -14,6 +14,11 @@ pnpm-debug.log*
 # Vite build output
 dist
 
+# Editor server artifacts built by `bun run build:server`
+packages/editor/bin/
+packages/editor/nvim/bin/
+packages/editor/vim/bin/
+
 # TypeScript
 *.tsbuildinfo
 
