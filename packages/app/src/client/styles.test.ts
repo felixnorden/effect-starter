@@ -180,18 +180,60 @@ const componentFiles = (): string[] =>
       !file.endsWith(".test.tsx"),
   );
 
-describe("theme styles", () => {
-  it("defines every colour as a CSS variable in one theme file", () => {
-    const css = readFileSync(path.join(clientDir, "styles.css"), "utf8");
-    const light = css.slice(css.indexOf(":root"), css.indexOf('[data-theme="dark"]'));
-    const dark = css.slice(css.indexOf('[data-theme="dark"]'));
+const ROLE_NAMES = [
+  "--color-bg",
+  "--color-surface",
+  "--color-fg",
+  "--color-muted",
+  "--color-border",
+  "--color-accent",
+  "--color-banner-bg",
+  "--color-banner-fg",
+  "--color-button-bg",
+  "--radius",
+] as const;
 
-    expect(light).toMatch(/--color-[a-z-]+:/u);
-    expect(dark).toMatch(/--color-[a-z-]+:/u);
+const stylesheet = (): string => readFileSync(path.join(clientDir, "styles.css"), "utf8");
+
+const rootBlock = (css: string): string => {
+  const start = css.indexOf(":root");
+  return css.slice(start, css.indexOf("}", start) + 1);
+};
+
+/** A declaration's value, without the trailing semicolon. */
+const declaredValue = (block: string, name: string): string | undefined =>
+  new RegExp(`${name}\\s*:\\s*([^;]+);`, "u").exec(block)?.[1]?.trim();
+
+describe("theme styles", () => {
+  it("aliases every page role onto a daisyUI token, without a value", () => {
+    const block = rootBlock(stylesheet());
+
+    for (const name of ROLE_NAMES) {
+      const value = declaredValue(block, name);
+      expect(value, `${name} is declared`).toBeDefined();
+      expect(value, `${name} aliases a token`).toMatch(
+        /^(?:var\(--(?:color|radius)-|color-mix\()/u,
+      );
+    }
+
+    expect(declaredValue(block, "--color-bg")).toBe("var(--color-base-100)");
+    expect(declaredValue(block, "--color-fg")).toBe("var(--color-base-content)");
+    expect(declaredValue(block, "--color-banner-bg")).toBe("var(--color-warning)");
+    expect(declaredValue(block, "--color-banner-fg")).toBe("var(--color-warning-content)");
+  });
+
+  it("declares no colour value and no second palette block", () => {
+    const css = stylesheet();
+
+    expect(css.match(/:root/g)).toHaveLength(1);
+    expect(css).not.toContain("[data-theme=");
+    expect(css).not.toContain("color-scheme:");
+    expect(css).not.toMatch(COLOUR_LITERAL);
+    expect(css).not.toMatch(/\boklch?\(/iu);
   });
 
   it("consumes role variables and no colour literal for fences", () => {
-    const css = readFileSync(path.join(clientDir, "styles.css"), "utf8");
+    const css = stylesheet();
     const shiki = css.slice(css.indexOf(".shiki"), css.indexOf("}", css.indexOf(".shiki")) + 1);
     const pre = css.slice(css.indexOf(".preview-body pre"), css.indexOf(".preview-body img"));
 
@@ -202,7 +244,7 @@ describe("theme styles", () => {
   });
 
   it("scopes the token rule to the role variables", () => {
-    const css = readFileSync(path.join(clientDir, "styles.css"), "utf8");
+    const css = stylesheet();
 
     expect(css).not.toContain("--shiki-light");
     expect(css).not.toContain("--shiki-dark");
@@ -210,7 +252,7 @@ describe("theme styles", () => {
   });
 
   it("numbers lines through a counter scoped to the attribute", () => {
-    const css = readFileSync(path.join(clientDir, "styles.css"), "utf8");
+    const css = stylesheet();
 
     expect(css).toContain("counter-reset: mdv-line;");
     expect(css).toContain('[data-line-numbers="on"] .shiki .line::before');
@@ -219,7 +261,7 @@ describe("theme styles", () => {
   });
 
   it("paints the gutter from the sheet's role variable", () => {
-    const css = readFileSync(path.join(clientDir, "styles.css"), "utf8");
+    const css = stylesheet();
     const gutter = css.slice(
       css.indexOf('[data-line-numbers="on"] .shiki .line::before'),
       css.indexOf("}", css.indexOf('[data-line-numbers="on"] .shiki .line::before')),
@@ -231,7 +273,7 @@ describe("theme styles", () => {
   });
 
   it("guards the phantom line", () => {
-    const css = readFileSync(path.join(clientDir, "styles.css"), "utf8");
+    const css = stylesheet();
 
     expect(css).toContain(".shiki .line:last-child:empty::before");
     expect(css).toContain("genuinely blank final source line");

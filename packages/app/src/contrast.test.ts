@@ -1,6 +1,20 @@
 import { describe, expect, it } from "vitest";
 
-import { contrastRatio, DECLARED_TEXT_PAIRS, parseColor, relativeLuminance } from "./contrast.ts";
+import {
+  contrastRatio,
+  DECLARED_TEXT_PAIRS,
+  parseColor,
+  relativeLuminance,
+  type Rgb,
+} from "./contrast.ts";
+
+/** One 8-bit step tolerates the rounding differences between colour spaces. */
+const expectChannelTolerance = (actual: Rgb | null, expected: Rgb): void => {
+  expect(actual).not.toBeNull();
+  expect(Math.abs((actual as Rgb).r - expected.r)).toBeLessThanOrEqual(1);
+  expect(Math.abs((actual as Rgb).g - expected.g)).toBeLessThanOrEqual(1);
+  expect(Math.abs((actual as Rgb).b - expected.b)).toBeLessThanOrEqual(1);
+};
 
 const HIGH_CONTRAST_LIGHT_TOKENS = [
   "#66707b",
@@ -26,6 +40,41 @@ describe("parseColor", () => {
   it("returns null for a value the ratio maths cannot read", () => {
     expect(parseColor("transparent")).toBeNull();
     expect(parseColor("var(--x)")).toBeNull();
+  });
+
+  it("parses an OKLCH colour with percent lightness", () => {
+    expectChannelTolerance(parseColor("oklch(100% 0 0)"), { r: 255, g: 255, b: 255 });
+    expectChannelTolerance(parseColor("oklch(0% 0 0)"), { r: 0, g: 0, b: 0 });
+  });
+
+  it("parses number lightness, a hue with a unit, and a slash alpha", () => {
+    const lightness = parseColor("oklch(0.5 0.1 200deg)");
+    const alpha = parseColor("oklch(62% 0.19 259.81 / 50%)");
+    const opaque = parseColor("oklch(62% 0.19 259.81)");
+    const blue = parseColor("oklch(45% 0.24 277.023)");
+
+    expect(lightness).not.toBeNull();
+    expect(alpha).not.toBeNull();
+    expect(opaque).not.toBeNull();
+    expect(blue).not.toBeNull();
+    // The alpha component does not change the channels the ratio maths reads.
+    expectChannelTolerance(alpha, opaque as Rgb);
+    expect(blue?.b ?? 0).toBeGreaterThan(blue?.r ?? 0);
+  });
+
+  it("treats a missing component as none and an Oklab value as an accepted form", () => {
+    const oklch = parseColor("oklch(50% none none)");
+    const oklab = parseColor("oklab(0.5 0 0)");
+
+    expect(oklch).not.toBeNull();
+    expect(oklab).not.toBeNull();
+    expectChannelTolerance(oklch, oklab as Rgb);
+  });
+
+  it("fails loudly on a form the ratio maths cannot read", () => {
+    expect(parseColor("var(--color-base-100)")).toBeNull();
+    expect(parseColor("color-mix(in oklab, oklch(1 0 0), oklch(0 0 0))")).toBeNull();
+    expect(parseColor("transparent")).toBeNull();
   });
 });
 

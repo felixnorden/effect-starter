@@ -7,11 +7,38 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { contrastRatio, DECLARED_TEXT_PAIRS, parseColor } from "../src/contrast.ts";
+import { PAGE_THEMES } from "../src/client/page-theme.ts";
 import { copyFixture, startPreview } from "../e2e/preview-server.ts";
 
 const MINIMUM = 4.5;
 
 const THEMES = ["light", "dark"] as const;
+
+/** The pairs a page theme can change: both sides are page role aliases. */
+const PAGE_TEXT_PAIRS = DECLARED_TEXT_PAIRS.filter(
+  (pair) => pair.foreground.startsWith("--color-") && pair.background.startsWith("--color-"),
+);
+
+type SampledColour = { readonly foreground: string; readonly background: string };
+
+/**
+ * Sample a declared pair through a probe element, so the browser resolves
+ * `var()` and `color-mix()` to the computed colours the reader ratio uses.
+ */
+const samplePair = (page: Page, foreground: string, background: string): Promise<SampledColour> =>
+  page.evaluate(
+    ([foregroundVar, backgroundVar]: readonly [string, string]) => {
+      const probe = document.createElement("div");
+      probe.style.color = `var(${foregroundVar})`;
+      probe.style.backgroundColor = `var(${backgroundVar})`;
+      document.body.append(probe);
+      const style = getComputedStyle(probe);
+      const sample = { foreground: style.color, background: style.backgroundColor };
+      probe.remove();
+      return sample;
+    },
+    [foreground, background] as const,
+  );
 
 const setTheme = async (page: Page, theme: (typeof THEMES)[number]): Promise<void> => {
   const current = await page.evaluate(() => document.documentElement.getAttribute("data-theme"));
@@ -129,17 +156,8 @@ test("body, muted, inline-code, and fence text clear 4.5:1 in both themes", asyn
 
 test("every declared text pair clears 4.5:1 in both themes", async ({ page }) => {
   await sampleDocument(page, "fixtures/kitchen-sink.md", async (theme) => {
-    const values = await page.evaluate((pairs) => {
-      const style = getComputedStyle(document.documentElement);
-      return pairs.map((pair) => ({
-        foreground: style.getPropertyValue(pair.foreground).trim(),
-        background: style.getPropertyValue(pair.background).trim(),
-      }));
-    }, DECLARED_TEXT_PAIRS);
-
-    for (const [index, pair] of DECLARED_TEXT_PAIRS.entries()) {
-      const sample = values[index];
-      if (sample === undefined) continue;
+    for (const pair of DECLARED_TEXT_PAIRS) {
+      const sample = await samplePair(page, pair.foreground, pair.background);
       const ratio = ratioOf(sample.foreground, sample.background, `${theme} ${pair.foreground}`);
       console.log(`${theme} ${pair.foreground} on ${pair.background}: ${ratio.toFixed(2)}`);
       expect(ratio, `${theme} ${pair.foreground} on ${pair.background}`).toBeGreaterThanOrEqual(
@@ -147,6 +165,45 @@ test("every declared text pair clears 4.5:1 in both themes", async ({ page }) =>
       );
     }
   });
+});
+
+test("every shipped page theme clears 4.5:1 in the scheme it declares", async ({ page }) => {
+  const copy = copyFixture("fixtures/kitchen-sink.md");
+  const server = await startPreview(copy.file);
+
+  try {
+    await page.goto(server.url);
+    await page.waitForSelector("[data-block-id]");
+
+    for (const theme of PAGE_THEMES) {
+      await page.evaluate(
+        (name) => document.documentElement.setAttribute("data-theme", name),
+        theme.name,
+      );
+      await paintFrame(page);
+
+      let smallest = { label: "", ratio: Number.POSITIVE_INFINITY };
+      for (const pair of PAGE_TEXT_PAIRS) {
+        const sample = await samplePair(page, pair.foreground, pair.background);
+        const ratio = ratioOf(
+          sample.foreground,
+          sample.background,
+          `${theme.name} ${pair.foreground}`,
+        );
+        if (ratio < smallest.ratio) smallest = { label: pair.foreground, ratio };
+        expect(
+          ratio,
+          `${theme.name} (${theme.scheme}) ${pair.foreground} on ${pair.background}: ${sample.foreground} on ${sample.background}`,
+        ).toBeGreaterThanOrEqual(MINIMUM);
+      }
+      console.log(
+        `${theme.name}: smallest ${smallest.label} ${smallest.ratio.toFixed(2)} over ${PAGE_TEXT_PAIRS.length} pairs`,
+      );
+    }
+  } finally {
+    await server.stop();
+    copy.stop();
+  }
 });
 
 test("the KaTeX error text clears 4.5:1 in both themes", async ({ page }) => {
