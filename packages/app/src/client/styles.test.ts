@@ -286,4 +286,24 @@ describe("theme styles", () => {
 
     expect(offenders).toEqual([]);
   });
+
+  it("keeps the affordances reachable and reveals them without reflow", () => {
+    const css = stylesheet();
+
+    expect(css).toContain("opacity: 0");
+    expect(css).toContain("pointer-events: none");
+    expect(css).not.toContain("visibility: hidden");
+    for (const selector of [
+      "[data-block-id]:hover",
+      "[data-block-id]:focus-within",
+      "[data-mdv-link]:hover",
+      "[data-mdv-link]:focus-within",
+    ]) {
+      expect(css, selector).toContain(selector);
+    }
+    expect(css).toContain("position: absolute");
+    expect(css).toContain("@media (prefers-reduced-motion: no-preference)");
+    expect(css).toContain("@media (hover: none)");
+    expect(css).toContain("position: static");
+  });
 });

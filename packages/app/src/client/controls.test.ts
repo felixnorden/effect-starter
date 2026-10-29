@@ -9,21 +9,64 @@ import { handleContentClick, type ControlDeps } from "./controls.ts";
 
 type ClickTarget = Parameters<typeof handleContentClick>[0]["target"];
 
+const targetOf = (control: unknown): ClickTarget => control as ClickTarget;
+
+/** A text control: a block-level cluster whose label span carries the message. */
 const fence = (text: string) => {
+  const label = { textContent: "Copy" };
   const code = { textContent: text };
-  const block = { querySelector: (selector: string) => (selector === "code" ? code : null) };
-  const button: {
-    textContent: string | null;
-    closest: (selector: string) => unknown;
-  } = {
-    textContent: "Copy",
-    closest: (selector: string) =>
-      selector === "[data-mdv-copy-code]" ? button : selector === "[data-block-id]" ? block : null,
+  const block = {
+    querySelector: (selector: string) => (selector === "code" ? code : null),
   };
-  return { button, code, block };
+  const button: Record<string, unknown> = {
+    getAttribute: () => null,
+    setAttribute: () => {},
+    removeAttribute: () => {},
+    querySelector: (selector: string) => (selector === "[data-mdv-label]" ? label : null),
+  };
+  button["closest"] = (selector: string) =>
+    selector === "[data-mdv-copy-code]" ? button : selector === "[data-block-id]" ? block : null;
+  return { button, code, block, label };
 };
 
-const targetOf = (button: unknown): ClickTarget => button as ClickTarget;
+const table = (rows: readonly (readonly string[])[]) => {
+  const label = { textContent: "Copy" };
+  const block = {
+    querySelectorAll: (selector: string) =>
+      selector === "tr"
+        ? rows.map((cells) => ({
+            querySelectorAll: (inner: string) =>
+              inner === "td, th" ? cells.map((text) => ({ textContent: text })) : [],
+          }))
+        : [],
+  };
+  const button: Record<string, unknown> = {
+    getAttribute: () => null,
+    setAttribute: () => {},
+    removeAttribute: () => {},
+    querySelector: (selector: string) => (selector === "[data-mdv-label]" ? label : null),
+  };
+  button["closest"] = (selector: string) =>
+    selector === "[data-mdv-copy-table]" ? button : selector === "[data-block-id]" ? block : null;
+  return { button, block, label };
+};
+
+/** An icon control: no label span, so the flash swaps the glyph attribute. */
+const iconControl = (selector: string, attribute: string, value: string) => {
+  const attributes = new Map<string, string>();
+  const button: Record<string, unknown> = {
+    getAttribute: (name: string) => (name === attribute ? value : (attributes.get(name) ?? null)),
+    setAttribute: (name: string, value: string) => {
+      attributes.set(name, value);
+    },
+    removeAttribute: (name: string) => {
+      attributes.delete(name);
+    },
+    querySelector: () => null,
+  };
+  button["closest"] = (candidate: string) => (candidate === selector ? button : null);
+  return { button, attributes };
+};
 
 const clipboardSpy = (fail = false) => {
   const writes: string[] = [];
@@ -74,14 +117,6 @@ const depsOf = (
   status,
   timers,
 });
-
-const linkButton = (id: string) => {
-  const button = {
-    getAttribute: (name: string) => (name === "data-mdv-copy-link" ? id : null),
-    closest: (selector: string) => (selector === "[data-mdv-copy-link]" ? button : null),
-  };
-  return button;
-};
 
 const headingIdsOf = (hast: readonly unknown[]): string[] => {
   const ids: string[] = [];
@@ -138,11 +173,40 @@ describe("handleContentClick", () => {
     expect(writes).toEqual([]);
   });
 
-  it("copies the heading's absolute URL, built from the existing id", async () => {
+  it("copies a table as tab-separated rows", async () => {
+    const { button } = table([
+      ["a", "b"],
+      ["c", "d"],
+    ]);
     const { clipboard, writes } = clipboardSpy();
     const { timers } = fakeTimers();
 
-    handleContentClick({ target: targetOf(linkButton("same-1")) }, depsOf(clipboard, timers));
+    handleContentClick({ target: targetOf(button) }, depsOf(clipboard, timers));
+    await Promise.resolve();
+
+    expect(writes).toEqual(["a\tb\nc\td"]);
+  });
+
+  it("copies an inline link's absolute address", async () => {
+    const { button } = iconControl("[data-mdv-copy-url]", "data-mdv-copy-url", "/local/notes.md");
+    const { clipboard, writes } = clipboardSpy();
+    const { timers } = fakeTimers();
+
+    handleContentClick(
+      { target: targetOf(button) },
+      depsOf(clipboard, timers, { textContent: null }, { href: "http://localhost:4321/preview" }),
+    );
+    await Promise.resolve();
+
+    expect(writes).toEqual(["http://localhost:4321/local/notes.md"]);
+  });
+
+  it("copies the heading's absolute URL, built from the existing id", async () => {
+    const { clipboard, writes } = clipboardSpy();
+    const { timers } = fakeTimers();
+    const { button } = iconControl("[data-mdv-copy-link]", "data-mdv-copy-link", "same-1");
+
+    handleContentClick({ target: targetOf(button) }, depsOf(clipboard, timers));
     await Promise.resolve();
 
     expect(writes).toEqual(["http://127.0.0.1:1/#same-1"]);
@@ -151,9 +215,10 @@ describe("handleContentClick", () => {
   it("keeps a query string and replaces an existing fragment", async () => {
     const { clipboard, writes } = clipboardSpy();
     const { timers } = fakeTimers();
+    const { button } = iconControl("[data-mdv-copy-link]", "data-mdv-copy-link", "same-1");
 
     handleContentClick(
-      { target: targetOf(linkButton("same-1")) },
+      { target: targetOf(button) },
       depsOf(
         clipboard,
         timers,
@@ -187,7 +252,8 @@ describe("handleContentClick", () => {
     const { timers } = fakeTimers();
     const deps = depsOf(clipboard, timers);
     for (const id of duplicates) {
-      handleContentClick({ target: targetOf(linkButton(id)) }, deps);
+      const { button } = iconControl("[data-mdv-copy-link]", "data-mdv-copy-link", id);
+      handleContentClick({ target: targetOf(button) }, deps);
     }
     await Promise.resolve();
 
@@ -205,46 +271,86 @@ describe("handleContentClick", () => {
     await Promise.resolve();
 
     expect(writes).toEqual(["second\n"]);
-    expect(first.button.textContent).toBe("Copy");
+    expect(first.label.textContent).toBe("Copy");
   });
 
-  it("reports a refused clipboard, keeps the button usable, and announces it", async () => {
-    const { button } = fence("code\n");
-    const { clipboard, writes } = clipboardSpy(true);
+  it("separates a failure from an empty payload", async () => {
+    const { button, label } = fence("code\n");
+    const { clipboard } = clipboardSpy(true);
     const { timers } = fakeTimers();
     const status = { textContent: null };
-    const deps = depsOf(clipboard, timers, status);
 
-    handleContentClick({ target: targetOf(button) }, deps);
+    handleContentClick({ target: targetOf(button) }, depsOf(clipboard, timers, status));
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(button.textContent).toBe("Copy failed");
+    expect(label.textContent).toBe("Copy failed");
     expect(status.textContent).toBe("Copy failed");
 
-    handleContentClick({ target: targetOf(button) }, deps);
+    const empty = fence("");
+    const emptyClipboard = clipboardSpy();
+    const emptyStatus = { textContent: null };
+    handleContentClick(
+      { target: targetOf(empty.button) },
+      depsOf(emptyClipboard.clipboard, timers, emptyStatus),
+    );
     await Promise.resolve();
-    expect(writes).toHaveLength(2);
+
+    expect(empty.label.textContent).toBe("Nothing to copy");
+    expect(emptyStatus.textContent).toBe("Nothing to copy");
+    expect(emptyClipboard.writes).toEqual([]);
   });
 
-  it("shows Copied on success and restores the label when the timer fires", async () => {
-    const { button } = fence("code\n");
+  it("shows Copied on success and restores the kind's own label", async () => {
+    const { button, label } = fence("code\n");
     const { clipboard } = clipboardSpy();
     const { timers, pending } = fakeTimers();
 
     handleContentClick({ target: targetOf(button) }, depsOf(clipboard, timers));
     await Promise.resolve();
 
-    expect(button.textContent).toBe("Copied");
+    expect(label.textContent).toBe("Copied");
     expect(pending.size).toBe(1);
 
     const [entry] = [...pending.values()];
     entry?.callback();
-    expect(button.textContent).toBe("Copy");
+    expect(label.textContent).toBe("Copy");
+  });
+
+  it("swaps the icon glyph on success and restores it when the timer fires", async () => {
+    const { button, attributes } = iconControl(
+      "[data-mdv-copy-link]",
+      "data-mdv-copy-link",
+      "same-1",
+    );
+    const { clipboard } = clipboardSpy();
+    const { timers, pending } = fakeTimers();
 
     handleContentClick({ target: targetOf(button) }, depsOf(clipboard, timers));
-    handleContentClick({ target: targetOf(button) }, depsOf(clipboard, timers));
+    await Promise.resolve();
+
+    expect(attributes.get("data-mdv-state")).toBe("copied");
+
+    const [entry] = [...pending.values()];
+    entry?.callback();
+    expect(attributes.has("data-mdv-state")).toBe(false);
+  });
+
+  it("does not restore a newer flash with an older generation", async () => {
+    const { button, label } = fence("code\n");
+    const { clipboard } = clipboardSpy();
+    const { timers, pending } = fakeTimers();
+    const deps = depsOf(clipboard, timers);
+
+    handleContentClick({ target: targetOf(button) }, deps);
+    await Promise.resolve();
+    const [first] = [...pending.values()];
+
+    handleContentClick({ target: targetOf(button) }, deps);
     await Promise.resolve();
     expect(pending.size).toBe(1);
+
+    first?.callback();
+    expect(label.textContent).toBe("Copied");
   });
 });

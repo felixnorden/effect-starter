@@ -173,6 +173,8 @@ test("numbers N lines and copies the exact source", async ({ page }) => {
     expect(lines.at(-1)?.text).toBe("");
     expect(lines.at(-1)?.content).toBe("none");
 
+    // The cluster reveals on hover; the pointer must enter the block first.
+    await threeLine.hover();
     await threeLine.getByRole("button", { name: "Copy code" }).click();
     await expect(threeLine.getByRole("button", { name: "Copy code" })).toHaveText("Copied");
     const clipboard = await page.evaluate(() => navigator.clipboard.readText());

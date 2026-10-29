@@ -65,11 +65,72 @@ const codeOf = (): WireBlock =>
     },
   ]);
 
+const tableOf = (): WireBlock =>
+  block("table", "table", [
+    {
+      type: "element",
+      tagName: "table",
+      properties: {},
+      children: [
+        {
+          type: "element",
+          tagName: "tbody",
+          properties: {},
+          children: [
+            {
+              type: "element",
+              tagName: "tr",
+              properties: {},
+              children: [
+                {
+                  type: "element",
+                  tagName: "td",
+                  properties: {},
+                  children: [{ type: "text", value: "a" }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ]);
+
+const linkParagraphOf = (): WireBlock =>
+  block("links", "paragraph", [
+    {
+      type: "element",
+      tagName: "p",
+      properties: {},
+      children: [
+        { type: "text", value: "See " },
+        {
+          type: "element",
+          tagName: "a",
+          properties: { href: "notes.md" },
+          children: [{ type: "text", value: "notes" }],
+        },
+        { type: "text", value: " and " },
+        {
+          type: "element",
+          tagName: "a",
+          properties: { href: "notes.md" },
+          children: [],
+        },
+      ],
+    },
+  ]);
+
+const controlOf = (markup: string, attribute: string): string =>
+  new RegExp(`<button[^>]*${attribute}[^>]*>[\\s\\S]*?<\\/button>`, "u").exec(markup)?.[0] ?? "";
+
 const fixtures = [
   headingOf("heading", "Heading"),
   paragraphOf("first", "First paragraph"),
   paragraphOf("second", "Second paragraph"),
   codeOf(),
+  tableOf(),
+  linkParagraphOf(),
 ];
 
 const markupOf = (blocks: readonly WireBlock[]): string =>
@@ -151,6 +212,52 @@ describe("BlockList", () => {
     expect(markup).toContain('aria-label="Copy link to Heading"');
     expect(markup).toContain('<h2 id="heading">Heading</h2><button');
     expect(markup).not.toContain('data-mdv-copy-link="undefined"');
+  });
+
+  it("restyles the heading control as an icon without moving it", () => {
+    const markup = markupOf([headingOf("heading", "Heading")]);
+    const control = controlOf(markup, "data-mdv-copy-link");
+
+    expect(markup).toContain('<h2 id="heading">Heading</h2><button');
+    expect(control).toContain('aria-label="Copy link to Heading"');
+    expect(control).toContain('aria-hidden="true"');
+    expect(control).not.toContain(">Link<");
+    expect(control).not.toContain("Copy link to Heading</button>");
+  });
+
+  it("gives a code block one action cluster with its named control", () => {
+    const markup = markupOf([codeOf()]);
+    const control = controlOf(markup, "data-mdv-copy-code");
+
+    expect(markup.match(/data-mdv-actions/gu)).toHaveLength(1);
+    expect(markup.indexOf("data-mdv-actions")).toBeGreaterThan(markup.indexOf("</pre>"));
+    expect(control).toContain('aria-label="Copy code"');
+    expect(control).toContain("data-mdv-label");
+    expect(control).toContain(">Copy</span>");
+  });
+
+  it("gives a table block one action cluster and leaves other kinds alone", () => {
+    const table = markupOf([tableOf()]);
+    const paragraph = markupOf([paragraphOf("plain", "Prose")]);
+
+    expect(table.match(/data-mdv-actions/gu)).toHaveLength(1);
+    expect(table.match(/data-mdv-copy-table/gu)).toHaveLength(1);
+    expect(controlOf(table, "data-mdv-copy-table")).toContain('aria-label="Copy table"');
+    expect(paragraph).not.toContain("data-mdv-copy-table");
+    expect(paragraph).not.toContain("data-mdv-actions");
+  });
+
+  it("gives each inline link an icon control named for its destination", () => {
+    const markup = markupOf([linkParagraphOf()]);
+    const controls = markup.match(/<button[^>]*data-mdv-copy-url[^>]*>[\s\S]*?<\/button>/gu) ?? [];
+
+    expect(controls).toHaveLength(2);
+    expect(markup.match(/data-mdv-link/gu)).toHaveLength(2);
+    expect(controls[0]).toContain('aria-label="Copy address of notes"');
+    expect(controls[1]).toContain('aria-label="Copy address of /local/notes.md"');
+    expect(controls[0]).toContain('data-mdv-copy-url="/local/notes.md"');
+    expect(controls[0]).toContain('aria-hidden="true"');
+    expect(controls[0]).not.toContain(">Copy<");
   });
 
   it("renders the control as a sibling of the block content", () => {

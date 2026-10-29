@@ -174,6 +174,55 @@ test("the bar names are distinct and disjoint from the affordance names", async 
   });
 });
 
+test("Tab reaches one control per kind and each is visible while focused", async ({ page }) => {
+  const KINDS = ["Copy link to", "Copy address of", "Copy table", "Copy code"] as const;
+
+  await withDocument(page, "fixtures/render-fidelity/typography.md", async () => {
+    const seen = new Map<string, { readonly opacity: number; readonly inViewport: boolean }>();
+
+    for (let index = 0; index < 60 && seen.size < KINDS.length; index += 1) {
+      await page.keyboard.press("Tab");
+      const label = await page.evaluate(
+        () => document.activeElement?.getAttribute("aria-label") ?? "",
+      );
+      if (!label.startsWith("Copy ")) continue;
+
+      await page.waitForFunction(() => {
+        const active = document.activeElement;
+        return (
+          active instanceof HTMLElement && Number.parseFloat(getComputedStyle(active).opacity) === 1
+        );
+      });
+
+      const state = await page.evaluate(() => {
+        const active = document.activeElement;
+        if (!(active instanceof HTMLElement)) return null;
+        const box = active.getBoundingClientRect();
+        return {
+          opacity: Number.parseFloat(getComputedStyle(active).opacity),
+          inViewport:
+            box.width > 0 &&
+            box.height > 0 &&
+            box.left >= -0.5 &&
+            box.right <= window.innerWidth + 0.5 &&
+            box.top >= -0.5 &&
+            box.bottom <= window.innerHeight + 0.5,
+        };
+      });
+      if (state === null) continue;
+
+      const kind = KINDS.find((prefix) => label.startsWith(prefix));
+      if (kind !== undefined) seen.set(kind, state);
+    }
+
+    expect([...seen.keys()].toSorted()).toEqual([...KINDS].toSorted());
+    for (const [kind, state] of seen) {
+      expect(state.opacity, `${kind} is visible while focused`).toBe(1);
+      expect(state.inViewport, `${kind} lies inside the viewport`).toBe(true);
+    }
+  });
+});
+
 test("the bar wraps instead of clipping at a narrow viewport", async ({ page }) => {
   const measure = (): Promise<{ boxes: readonly [number, number][]; height: number }> =>
     page.evaluate(() => {
