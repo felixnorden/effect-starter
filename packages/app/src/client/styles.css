@@ -36,6 +36,98 @@ a {
   text-underline-offset: 0.15em;
 }
 
+/* Preflight removes the browser's element typography; this layer authors a
+   deliberate one. Every size is in `rem`, so the font-scale preset scales
+   prose, fences, and chrome together. */
+.preview-body :is(h2, h3, h4, h5, h6) {
+  margin-block: 1.5em 0.5em;
+  line-height: 1.25;
+}
+
+.preview-body h2 {
+  font-size: 1.5rem;
+}
+
+.preview-body h3 {
+  font-size: 1.25rem;
+}
+
+.preview-body h4 {
+  font-size: 1.125rem;
+}
+
+.preview-body h5 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.preview-body h6 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.preview-body :is(p, ul, ol, dl, blockquote, pre, table, figure) {
+  margin-block: 1em;
+}
+
+/* The blocks are wrapped, so the first and last element inside the run lose
+   their edge margin rather than the wrapper, which never had one. */
+.preview-body > :first-child > :first-child {
+  margin-block-start: 0;
+}
+
+.preview-body > :last-child > :last-child {
+  margin-block-end: 0;
+}
+
+.preview-body :is(ul, ol) {
+  padding-inline-start: 1.5em;
+}
+
+.preview-body ul {
+  list-style: disc;
+}
+
+.preview-body ol {
+  list-style: decimal;
+}
+
+.preview-body li {
+  margin-block: 0.25em;
+}
+
+.preview-body li > :is(ul, ol) {
+  margin-block: 0.25em;
+}
+
+.preview-body code:not(pre code) {
+  padding: 0.1em 0.35em;
+  font-size: 0.9em;
+  background: var(--color-surface);
+  border-radius: calc(var(--radius) / 2);
+}
+
+.preview-body th {
+  font-weight: 600;
+  background: var(--color-surface);
+}
+
+.preview-body hr {
+  margin-block: 1.5em;
+  border: 0;
+  border-block-start: 1px solid var(--color-border);
+}
+
+.preview-body figure {
+  margin-inline: 0;
+}
+
+.preview-body figcaption {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
 .preview-shell {
   max-width: var(--preview-width, 56rem);
   margin: 0 auto;
@@ -66,7 +158,7 @@ a {
 
 .preview-title {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.75rem;
 }
 
 .preview-theme-toggle {
