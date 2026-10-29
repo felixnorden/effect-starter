@@ -52,6 +52,8 @@ describe("editor assets", () => {
       "nvim/lua/markdown_viewer/frames.lua",
       "nvim/lua/markdown_viewer/discovery.lua",
       "nvim/lua/markdown_viewer/messages.lua",
+      "nvim/lua/markdown_viewer/refresh.lua",
+      "tests/refresh-cases.json",
       "nvim/lua/markdown_viewer/generated/wire.lua",
       "nvim/lua/markdown_viewer/generated/codec.lua",
     ];
@@ -95,6 +97,7 @@ describe("editor assets", () => {
       "vim/autoload/markdown_viewer/frames.vim",
       "vim/autoload/markdown_viewer/discovery.vim",
       "vim/autoload/markdown_viewer/messages.vim",
+      "vim/autoload/markdown_viewer/refresh.vim",
       "vim/autoload/markdown_viewer/generated/wire.vim",
       "vim/autoload/markdown_viewer/generated/codec.vim",
     ];

@@ -42,6 +42,9 @@ local function teardown(current, reason)
   end
 
   row = nil
+  if current.refresh ~= nil then
+    current.refresh.stop()
+  end
   clear_timer(current)
   if current.job ~= nil and not current.exited then
     expected_exit[current.job] = true
@@ -131,16 +134,17 @@ local function on_exit(current, code)
   teardown(current, nil)
 end
 
---- The one document builder: unnamed refused, cap refused, otherwise a frame.
-local function document_frame(current)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local path = vim.api.nvim_buf_get_name(bufnr)
+--- The one builder: the text-length lower bound first, then unnamed and cap.
+local function encode_document(current, path, text)
   if path == "" then
     report(current, messages.unnamed)
     return nil
   end
-
-  local text = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n") .. "\n"
+  -- The encoded frame contains the text escaped and never shortened.
+  if #text >= codec.max_frame_bytes then
+    report(current, messages.oversize(codec.max_frame_bytes))
+    return nil
+  end
   local message = {
     _tag = "document",
     editorProtocolVersion = codec.editor_protocol_version,
@@ -155,6 +159,29 @@ local function document_frame(current)
   return frame
 end
 
+--- The one wire path for a later frame: the manual command and the refresh
+--- module both reach it. Returns whether the frame left.
+local function transmit(current, path, text)
+  local frame = encode_document(current, path, text)
+  if frame == nil then
+    return false
+  end
+  if not frames.send(current.job, frame) then
+    report(current, messages.dead_server(current.log, "closed"))
+    teardown(current, nil)
+    return false
+  end
+  return true
+end
+
+--- The refresh module's send: the row must be open (M-5).
+local function send_document(current, path, text)
+  if current ~= row or current.state ~= "open" then
+    return false
+  end
+  return transmit(current, path, text)
+end
+
 local function start()
   local current = {
     state = "starting",
@@ -165,8 +192,12 @@ local function start()
     timer = nil,
     exited = false,
     fatal = false,
+    refresh = nil,
   }
-  local frame = document_frame(current)
+  local bufnr = vim.api.nvim_get_current_buf()
+  local path = vim.api.nvim_buf_get_name(bufnr)
+  local text = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n") .. "\n"
+  local frame = encode_document(current, path, text)
   if frame == nil then
     return
   end
@@ -211,22 +242,64 @@ local function start()
     return
   end
 
+  current.refresh = require("markdown_viewer.refresh").new({
+    read = function(subject)
+      subject = subject or vim.api.nvim_get_current_buf()
+      if not vim.api.nvim_buf_is_valid(subject) then
+        return nil
+      end
+      local name = vim.api.nvim_buf_get_name(subject)
+      if name == "" then
+        return nil
+      end
+      return {
+        bufnr = subject,
+        path = name,
+        text = table.concat(vim.api.nvim_buf_get_lines(subject, 0, -1, false), "\n") .. "\n",
+      }
+    end,
+    send = function(name, body)
+      return send_document(current, name, body)
+    end,
+    now = function()
+      return vim.uv.now()
+    end,
+    timer = {
+      schedule = function(ms, fn)
+        return vim.fn.timer_start(ms, fn)
+      end,
+      cancel = function(handle)
+        pcall(vim.fn.timer_stop, handle)
+      end,
+    },
+  })
+
+  local group = vim.api.nvim_create_augroup("markdown_viewer_refresh", { clear = false })
+  vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
+    group = group,
+    callback = function(args)
+      if row == nil then
+        return
+      end
+      local bound = row.refresh.bound()
+      if bound == nil or args.buf ~= bound then
+        return
+      end
+      M.stop()
+    end,
+  })
+  vim.api.nvim_create_autocmd("VimLeavePre", {
+    group = group,
+    callback = function()
+      M.stop()
+    end,
+  })
+
   current.timer = vim.fn.timer_start(START_TIMEOUT_MS, function()
     if row == current and current.state == "starting" then
       teardown(current, messages.timeout(START_TIMEOUT_MS, current.log))
     end
   end)
-end
-
-local function refresh(current)
-  local frame = document_frame(current)
-  if frame == nil then
-    return
-  end
-  if not frames.send(current.job, frame) then
-    report(current, messages.dead_server(current.log, "closed"))
-    teardown(current, nil)
-  end
 end
 
 function M.preview()
@@ -237,7 +310,7 @@ function M.preview()
   if row.state == "starting" then
     return
   end
-  refresh(row)
+  row.refresh.manual()
 end
 
 function M.stop()

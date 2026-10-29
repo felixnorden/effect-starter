@@ -1,0 +1,472 @@
+{
+  "windowMs": 33,
+  "cases": [
+    {
+      "name": "three events inside one window send once, then re-read the newest text once more",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v0\n" },
+      "events": [
+        {
+          "kind": "CursorMoved",
+          "atMs": 0,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" }
+        },
+        {
+          "kind": "CursorMoved",
+          "atMs": 8,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        {
+          "kind": "CursorMoved",
+          "atMs": 16,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v3\n" }
+        },
+        { "kind": "Elapsed", "atMs": 40 }
+      ],
+      "expect": {
+        "attempts": 2,
+        "sends": [
+          { "path": "/repo/notes.md", "text": "v1\n" },
+          { "path": "/repo/notes.md", "text": "v3\n" }
+        ]
+      }
+    },
+    {
+      "name": "events in separate windows send once each",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v0\n" },
+      "events": [
+        {
+          "kind": "CursorMoved",
+          "atMs": 0,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "x\n" }
+        },
+        {
+          "kind": "CursorMoved",
+          "atMs": 40,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "y\n" }
+        },
+        {
+          "kind": "CursorMoved",
+          "atMs": 80,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "z\n" }
+        },
+        { "kind": "Elapsed", "atMs": 120 }
+      ],
+      "expect": {
+        "attempts": 3,
+        "sends": [
+          { "path": "/repo/notes.md", "text": "x\n" },
+          { "path": "/repo/notes.md", "text": "y\n" },
+          { "path": "/repo/notes.md", "text": "z\n" }
+        ]
+      }
+    },
+    {
+      "name": "an event inside a window does not extend it",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v0\n" },
+      "events": [
+        {
+          "kind": "CursorMoved",
+          "atMs": 0,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" }
+        },
+        {
+          "kind": "CursorMoved",
+          "atMs": 30,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        { "kind": "Elapsed", "atMs": 70 }
+      ],
+      "expect": {
+        "attempts": 2,
+        "sends": [
+          { "path": "/repo/notes.md", "text": "v1\n" },
+          { "path": "/repo/notes.md", "text": "v2\n" }
+        ]
+      }
+    },
+    {
+      "name": "a stop inside a window sends nothing afterwards and leaves no timer",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v0\n" },
+      "events": [
+        {
+          "kind": "CursorMoved",
+          "atMs": 0,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" }
+        },
+        { "kind": "Stop", "atMs": 10 },
+        {
+          "kind": "CursorMoved",
+          "atMs": 20,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        { "kind": "Elapsed", "atMs": 80 }
+      ],
+      "expect": {
+        "attempts": 1,
+        "sends": [{ "path": "/repo/notes.md", "text": "v1\n" }]
+      }
+    },
+    {
+      "name": "unchanged text sends nothing and opens no window",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" },
+      "events": [
+        {
+          "kind": "CursorMoved",
+          "atMs": 0,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" }
+        },
+        {
+          "kind": "CursorMoved",
+          "atMs": 20,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" }
+        },
+        {
+          "kind": "CursorMoved",
+          "atMs": 50,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" }
+        },
+        { "kind": "Elapsed", "atMs": 90 }
+      ],
+      "expect": { "attempts": 0, "sends": [], "schedules": 0 }
+    },
+    {
+      "name": "another buffer's read sends nothing",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" },
+      "events": [
+        {
+          "kind": "CursorMoved",
+          "atMs": 0,
+          "read": { "bufnr": 2, "path": "/repo/other.md", "text": "other\n" }
+        },
+        { "kind": "Elapsed", "atMs": 40 }
+      ],
+      "expect": { "attempts": 0, "sends": [] }
+    },
+    {
+      "name": "an empty read sends nothing",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" },
+      "events": [
+        { "kind": "CursorMoved", "atMs": 0, "read": null },
+        { "kind": "Elapsed", "atMs": 40 }
+      ],
+      "expect": { "attempts": 0, "sends": [] }
+    },
+    {
+      "name": "a renamed buffer keeps refreshing and the frame carries the new path",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" },
+      "events": [
+        {
+          "kind": "CursorMoved",
+          "atMs": 0,
+          "read": { "bufnr": 1, "path": "/repo/notes-final.md", "text": "v2\n" }
+        },
+        { "kind": "Elapsed", "atMs": 40 }
+      ],
+      "expect": {
+        "attempts": 1,
+        "sends": [{ "path": "/repo/notes-final.md", "text": "v2\n" }]
+      }
+    },
+    {
+      "name": "an undo back to the sent text inside one window sends nothing more",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v0\n" },
+      "events": [
+        {
+          "kind": "CursorMoved",
+          "atMs": 0,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" }
+        },
+        {
+          "kind": "CursorMoved",
+          "atMs": 8,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        {
+          "kind": "CursorMoved",
+          "atMs": 16,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" }
+        },
+        { "kind": "Elapsed", "atMs": 40 }
+      ],
+      "expect": {
+        "attempts": 1,
+        "sends": [{ "path": "/repo/notes.md", "text": "v1\n" }]
+      }
+    },
+    {
+      "name": "a row that is not open yet is refused and then accepted",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" },
+      "sendAnswers": [false, true],
+      "events": [
+        {
+          "kind": "CursorMoved",
+          "atMs": 0,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        {
+          "kind": "CursorMoved",
+          "atMs": 10,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        {
+          "kind": "CursorMoved",
+          "atMs": 80,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        { "kind": "Elapsed", "atMs": 100 }
+      ],
+      "expect": {
+        "attempts": 2,
+        "sends": [{ "path": "/repo/notes.md", "text": "v2\n" }]
+      }
+    },
+    {
+      "name": "a refused send is retried with the same text",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" },
+      "sendAnswers": [false, false, true],
+      "events": [
+        {
+          "kind": "CursorMoved",
+          "atMs": 0,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        {
+          "kind": "CursorMoved",
+          "atMs": 40,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        {
+          "kind": "CursorMoved",
+          "atMs": 80,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        { "kind": "Elapsed", "atMs": 120 }
+      ],
+      "expect": {
+        "attempts": 3,
+        "sends": [{ "path": "/repo/notes.md", "text": "v2\n" }]
+      }
+    },
+    {
+      "name": "an immediate trigger sends without waiting for a window",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" },
+      "events": [
+        {
+          "kind": "BufWritePost",
+          "atMs": 5,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        { "kind": "Elapsed", "atMs": 100 }
+      ],
+      "expect": {
+        "attempts": 1,
+        "sends": [{ "path": "/repo/notes.md", "text": "v2\n" }],
+        "schedules": 0
+      }
+    },
+    {
+      "name": "an immediate trigger inside an open window drops the trailing send",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v0\n" },
+      "events": [
+        {
+          "kind": "CursorMoved",
+          "atMs": 0,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" }
+        },
+        {
+          "kind": "BufWritePost",
+          "atMs": 10,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        { "kind": "Elapsed", "atMs": 60 }
+      ],
+      "expect": {
+        "attempts": 2,
+        "sends": [
+          { "path": "/repo/notes.md", "text": "v1\n" },
+          { "path": "/repo/notes.md", "text": "v2\n" }
+        ]
+      }
+    },
+    {
+      "name": "a save inside an open window is not undone by an older pending wake",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v0\n" },
+      "events": [
+        {
+          "kind": "CursorMoved",
+          "atMs": 0,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" }
+        },
+        {
+          "kind": "CursorMoved",
+          "atMs": 5,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        {
+          "kind": "BufWritePost",
+          "atMs": 10,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v3\n" }
+        },
+        { "kind": "Elapsed", "atMs": 60 }
+      ],
+      "expect": {
+        "attempts": 2,
+        "sends": [
+          { "path": "/repo/notes.md", "text": "v1\n" },
+          { "path": "/repo/notes.md", "text": "v3\n" }
+        ]
+      }
+    },
+    {
+      "name": "InsertLeave behaves like a save",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v0\n" },
+      "events": [
+        {
+          "kind": "CursorMoved",
+          "atMs": 0,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" }
+        },
+        {
+          "kind": "CursorMoved",
+          "atMs": 5,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        {
+          "kind": "InsertLeave",
+          "atMs": 10,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v3\n" }
+        },
+        { "kind": "Elapsed", "atMs": 60 }
+      ],
+      "expect": {
+        "attempts": 2,
+        "sends": [
+          { "path": "/repo/notes.md", "text": "v1\n" },
+          { "path": "/repo/notes.md", "text": "v3\n" }
+        ]
+      }
+    },
+    {
+      "name": "a save of the bound buffer refreshes it while the current buffer is another",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" },
+      "events": [
+        {
+          "kind": "BufWritePost",
+          "atMs": 0,
+          "buf": 1,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        { "kind": "Elapsed", "atMs": 40 }
+      ],
+      "expect": {
+        "attempts": 1,
+        "sends": [{ "path": "/repo/notes.md", "text": "v2\n" }],
+        "schedules": 0
+      }
+    },
+    {
+      "name": "manual cancels the pending window and sends the newest text",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v0\n" },
+      "events": [
+        {
+          "kind": "CursorMoved",
+          "atMs": 0,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" }
+        },
+        {
+          "kind": "CursorMoved",
+          "atMs": 10,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        {
+          "kind": "Manual",
+          "atMs": 12,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        { "kind": "Elapsed", "atMs": 60 }
+      ],
+      "expect": {
+        "attempts": 2,
+        "sends": [
+          { "path": "/repo/notes.md", "text": "v1\n" },
+          { "path": "/repo/notes.md", "text": "v2\n" }
+        ]
+      }
+    },
+    {
+      "name": "manual sends unchanged text",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" },
+      "events": [
+        {
+          "kind": "Manual",
+          "atMs": 5,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" }
+        },
+        { "kind": "Elapsed", "atMs": 40 }
+      ],
+      "expect": {
+        "attempts": 1,
+        "sends": [{ "path": "/repo/notes.md", "text": "v1\n" }],
+        "schedules": 0
+      }
+    },
+    {
+      "name": "manual on a switched or unnamed buffer is inert",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" },
+      "events": [
+        {
+          "kind": "Manual",
+          "atMs": 0,
+          "read": { "bufnr": 2, "path": "/repo/other.md", "text": "other\n" }
+        },
+        { "kind": "Manual", "atMs": 10, "read": null },
+        { "kind": "Elapsed", "atMs": 40 }
+      ],
+      "expect": { "attempts": 0, "sends": [], "schedules": 0 }
+    },
+    {
+      "name": "a stop leaves the module unbound and silent",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v0\n" },
+      "events": [
+        {
+          "kind": "CursorMoved",
+          "atMs": 0,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" }
+        },
+        { "kind": "Stop", "atMs": 10 },
+        {
+          "kind": "CursorMoved",
+          "atMs": 20,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        {
+          "kind": "CursorMoved",
+          "atMs": 30,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v3\n" }
+        },
+        { "kind": "Elapsed", "atMs": 80 }
+      ],
+      "expect": {
+        "attempts": 1,
+        "sends": [{ "path": "/repo/notes.md", "text": "v1\n" }]
+      }
+    },
+    {
+      "name": "a wiped buffer sends nothing",
+      "bind": { "bufnr": 1, "path": "/repo/notes.md", "text": "v1\n" },
+      "events": [
+        {
+          "kind": "CursorMoved",
+          "atMs": 0,
+          "read": { "bufnr": 1, "path": "/repo/notes.md", "text": "v2\n" }
+        },
+        { "kind": "CursorMoved", "atMs": 10, "read": null },
+        { "kind": "Elapsed", "atMs": 40 }
+      ],
+      "expect": {
+        "attempts": 1,
+        "sends": [{ "path": "/repo/notes.md", "text": "v2\n" }]
+      }
+    }
+  ]
+}

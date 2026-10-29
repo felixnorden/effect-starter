@@ -19,6 +19,7 @@
     "editor:probe": "bun scripts/editor-probe.ts",
     "editor:conformance": "bun scripts/editor-conformance.ts",
     "editor:lifecycle": "bun scripts/editor-lifecycle.ts",
+    "editor:refresh": "bun scripts/editor-refresh.ts",
     "editor:bench": "bun scripts/editor-bench.ts",
     "check:pointers": "bun scripts/check-requirements-pointers.ts",
     "check": "oxlint . && oxfmt --check . && bun run --workspaces check:types && bun run test",
