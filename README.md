@@ -6,6 +6,8 @@ built React page.
 
 - `packages/core` — the renderer, the session, and the protocol. Source-only.
 - `packages/app` — file watch, the WebSocket server, and the rendered page.
+- `packages/editor` — the Neovim and Vim adapters, their shared harness, and the
+  generated codecs.
 
 ## Start
 
@@ -71,6 +73,27 @@ Open Vite's URL. The fixed dev port is defined once in
 `packages/app/src/dev-config.ts`; `preview` never reads it. Development uses
 `fixtures/kitchen-sink.md` unless you edit the `dev` script.
 
+## Editor
+
+The Neovim and Vim adapters live in `packages/editor`. Install them with your
+plugin manager and point its build hook at `./install.sh`; the package README
+has lazy.nvim and vim-plug examples.
+
+```sh
+bun run build:server
+bun run editor:bench:installed
+```
+
+`build:server` writes the gitignored `packages/editor/bin/mdv-<os>-<arch>` and
+`bin/client/`. With Bun and a checkout, `install.sh` runs that build. Otherwise
+it downloads `mdv-<os>-<arch>.tar.gz` and its `.sha256` from
+`MDV_RELEASE_BASE_URL`. No binary or client bundle is committed.
+
+Editor evidence runs beside the gate: `bun run editor:probe`,
+`bun run editor:conformance`, `bun run editor:lifecycle`,
+`bun run editor:refresh`, `bun run editor:bench`, and
+`bun run editor:bench:installed`.
+
 ## Layout
 
 ```txt
@@ -81,10 +104,15 @@ packages/
 │  ├─ session/          # block diff and the document session
 │  ├─ protocol.ts       # preview protocol v1
 │  └─ index.ts          # public surface
-└─ app/
-   ├─ src/main.ts       # CLI entrypoint
-   ├─ src/client/       # the React page
-   └─ vite.config.ts    # client build
+├─ app/
+│  ├─ src/main.ts       # CLI entrypoint
+│  ├─ src/client/       # the React page
+│  └─ vite.config.ts    # client build
+└─ editor/
+   ├─ nvim/             # Neovim adapter and its install wrapper
+   ├─ vim/              # Vim adapter and its install wrapper
+   ├─ install.sh        # build or download the server
+   └─ bin/              # generated server and client, gitignored
 ```
 
 ## Replace the app
@@ -98,7 +126,8 @@ command picks it up.
 Hono, React, a Cloudflare Worker, or a CLI all work. Keep domain logic and
 config reads in core. If the replacement adds a build, add the package script, a
 root `build`, and a CI step together. `bun run build` writes
-`packages/app/dist/client`.
+`packages/app/dist/client`. The editor server has its own root build,
+`bun run build:server`, and its own CI step in the editors job.
 
 ## Core example
 

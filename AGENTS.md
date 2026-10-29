@@ -12,6 +12,13 @@ The scripts are in `package.json`. Run them with `bun run <script>`. The gate is
 bun run check
 ```
 
+The editor server has its own local build and evidence commands:
+
+```sh
+bun run build:server          # writes gitignored packages/editor/bin
+bun run editor:bench:installed
+```
+
 Do not add npm, pnpm, or a second lockfile.
 
 ## Invariants
