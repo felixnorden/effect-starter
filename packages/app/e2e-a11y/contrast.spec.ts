@@ -40,12 +40,14 @@ const samplePair = (page: Page, foreground: string, background: string): Promise
     [foreground, background] as const,
   );
 
-const setTheme = async (page: Page, theme: (typeof THEMES)[number]): Promise<void> => {
-  const current = await page.evaluate(() => document.documentElement.getAttribute("data-theme"));
-  if (current !== theme) await page.getByRole("button", { name: /^(Light|Dark)$/u }).click();
+const setMode = async (page: Page, mode: (typeof THEMES)[number]): Promise<void> => {
+  const current = await page.evaluate(() =>
+    document.documentElement.getAttribute("data-color-mode"),
+  );
+  if (current !== mode) await page.getByRole("button", { name: /^(Light|Dark)$/u }).click();
   await page.waitForFunction(
-    (wanted) => document.documentElement.getAttribute("data-theme") === wanted,
-    theme,
+    (wanted) => document.documentElement.getAttribute("data-color-mode") === wanted,
+    mode,
   );
 };
 
@@ -79,7 +81,7 @@ const sampleDocument = async (
     await page.waitForSelector("[data-block-id]");
     await paintFrame(page);
     for (const theme of THEMES) {
-      await setTheme(page, theme);
+      await setMode(page, theme);
       await sample(theme);
     }
   } finally {
@@ -234,7 +236,7 @@ test("samples the composed role colours for one non-default pair", async ({ page
     await page.selectOption('[data-theme-select="dark"]', "dark-plus");
 
     for (const theme of THEMES) {
-      await setTheme(page, theme);
+      await setMode(page, theme);
       await paintFrame(page);
       const sample = await page.evaluate(() => ({
         background: getComputedStyle(document.querySelector(".shiki") ?? document.body)

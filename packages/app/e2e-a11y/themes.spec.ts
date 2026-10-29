@@ -13,12 +13,14 @@ import { copyFixture, startPreview } from "../e2e/preview-server.ts";
 test.use({ permissions: ["clipboard-read", "clipboard-write"] });
 
 const setMode = async (page: Page, wanted: "light" | "dark"): Promise<void> => {
-  const current = await page.evaluate(() => document.documentElement.getAttribute("data-theme"));
+  const current = await page.evaluate(() =>
+    document.documentElement.getAttribute("data-color-mode"),
+  );
   if (current !== wanted) {
     await page.getByRole("button", { name: /^(Light|Dark)$/u }).click();
   }
   await page.waitForFunction(
-    (mode) => document.documentElement.getAttribute("data-theme") === mode,
+    (mode) => document.documentElement.getAttribute("data-color-mode") === mode,
     wanted,
   );
 };
@@ -99,6 +101,39 @@ test("repaints both modes without a reload and without replacing a block", async
     expect(after.text).toBe(before.text);
     expect(after.scrollY).toBe(before.scrollY);
     expect(after.blocks).toBe(before.blocks);
+  } finally {
+    await server.stop();
+    copy.stop();
+  }
+});
+
+test("a non-default page theme keeps every code role resolving", async ({ page }) => {
+  const copy = copyFixture("fixtures/render-fidelity/themes.md");
+  const server = await startPreview(copy.file);
+
+  try {
+    await page.goto(server.url);
+    await page.waitForSelector(".shiki");
+    await setMode(page, "light");
+
+    const before = await fenceColours(page);
+    expect(before.flat().every((colour) => colour.trim() !== "")).toBe(true);
+
+    await page.evaluate(() => document.documentElement.setAttribute("data-theme", "garden"));
+    const afterPageTheme = await fenceColours(page);
+    expect(afterPageTheme).toEqual(before);
+
+    await page.selectOption('[data-theme-select="light"]', "light-plus");
+    await page.waitForFunction(
+      () =>
+        (document.querySelector('[data-theme-select="light"]') as HTMLSelectElement | null)
+          ?.value === "light-plus",
+    );
+    const afterCodeTheme = await fenceColours(page);
+    expect(afterCodeTheme).not.toEqual(before);
+    console.log(
+      `garden kept ${before.length} fences unchanged; the code theme still repaints them`,
+    );
   } finally {
     await server.stop();
     copy.stop();

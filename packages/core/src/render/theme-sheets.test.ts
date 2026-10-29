@@ -6,6 +6,7 @@ import { createOnigurumaEngine } from "shiki/engine/oniguruma";
 import { bundledThemes, bundledThemesInfo } from "shiki/themes";
 
 import { contrastRatio } from "../../../../packages/app/src/contrast.ts";
+import { COLOR_MODE_ATTRIBUTE } from "../../../../packages/app/src/client/axes.ts";
 import { ROLE_EXEMPLARS, ROLES, ROLE_SCOPES, ROLE_THEME, type Role } from "./highlight.ts";
 import {
   BACKGROUND_VARIABLE,
@@ -13,6 +14,7 @@ import {
   FOREGROUND_VARIABLE,
   roleValuesFrom,
   ROLE_VARIABLE_PREFIX,
+  sheetCss,
   sheetDeclarations,
   type Sheet,
 } from "./theme-sheets.ts";
@@ -175,14 +177,41 @@ describe("theme sheets", () => {
     );
   });
 
+  it("keys the sheet block on the colour-mode attribute", () => {
+    const sheet = roleValuesFrom(
+      { id: "sample", type: "light" },
+      Object.fromEntries(ROLES.map((role) => [role, "#000000"])) as Record<Role, string>,
+      "#ffffff",
+      "#000000",
+    );
+
+    const css = sheetCss(sheet);
+
+    expect(css.startsWith('[data-color-mode="light"] {')).toBe(true);
+    expect(css).not.toContain("[data-theme=");
+  });
+
+  it("keys the sheet on the attribute the app writes", () => {
+    const sheet = roleValuesFrom(
+      { id: "sample", type: "light" },
+      Object.fromEntries(ROLES.map((role) => [role, "#000000"])) as Record<Role, string>,
+      "#ffffff",
+      "#000000",
+    );
+
+    expect(sheetCss(sheet).startsWith(`[${COLOR_MODE_ATTRIBUTE}="light"]`)).toBe(true);
+  });
+
   it("scopes every sheet to exactly one mode", () => {
     for (const file of sheetFiles) {
       const id = file.slice(0, -".css".length);
       const css = readFileSync(new URL(file, SHEET_DIR), "utf8");
-      const selectors = [...css.matchAll(/\[data-theme="([a-z]+)"\]/gu)].map((match) => match[1]);
+      const selectors = [...css.matchAll(/\[data-color-mode="([a-z]+)"\]/gu)].map(
+        (match) => match[1],
+      );
 
       expect(selectors, file).toEqual([derived.get(id)?.mode]);
-      expect(css.slice(0, css.indexOf("{"))).toBe(`[data-theme="${selectors[0]}"] `);
+      expect(css.slice(0, css.indexOf("{"))).toBe(`[data-color-mode="${selectors[0]}"] `);
       expect(css.slice(css.lastIndexOf("}") + 1).trim()).toBe("");
     }
   });

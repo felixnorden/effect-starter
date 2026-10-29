@@ -6,6 +6,9 @@ export const FOREGROUND_VARIABLE = "--mdv-foreground";
 
 export type ThemeMode = "light" | "dark";
 
+/** The root attribute the page writes and the generated sheets are keyed on. */
+export const COLOR_MODE_ATTRIBUTE = "data-color-mode";
+
 export type SheetTheme = {
   readonly id: string;
   readonly type: ThemeMode;
@@ -54,7 +57,7 @@ export const declarationMismatches = (
 
 /** The sheet's one mode-scoped block; the role order is fixed by `ROLES`. */
 export const sheetCss = (sheet: Sheet): string =>
-  `[data-theme="${sheet.mode}"] {\n${[
+  `[${COLOR_MODE_ATTRIBUTE}="${sheet.mode}"] {\n${[
     ...ROLES.map((role) => `${ROLE_VARIABLE_PREFIX}${role}: ${sheet.values[role]};`),
     `${BACKGROUND_VARIABLE}: ${sheet.background};`,
     `${FOREGROUND_VARIABLE}: ${sheet.foreground};`,
