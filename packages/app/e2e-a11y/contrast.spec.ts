@@ -6,7 +6,12 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 
-import { contrastRatio, DECLARED_TEXT_PAIRS, parseColor } from "../src/contrast.ts";
+import {
+  contrastRatio,
+  DECLARED_NON_TEXT_PAIRS,
+  DECLARED_TEXT_PAIRS,
+  parseColor,
+} from "../src/contrast.ts";
 import { PAGE_THEMES } from "../src/client/page-theme.ts";
 import { copyFixture, startPreview } from "../e2e/preview-server.ts";
 
@@ -41,10 +46,12 @@ const samplePair = (page: Page, foreground: string, background: string): Promise
   );
 
 const setMode = async (page: Page, mode: (typeof THEMES)[number]): Promise<void> => {
-  const current = await page.evaluate(() =>
-    document.documentElement.getAttribute("data-color-mode"),
-  );
-  if (current !== mode) await page.getByRole("button", { name: /^(Light|Dark)$/u }).click();
+  const pressed = await page
+    .getByRole("button", { name: "Dark mode" })
+    .getAttribute("aria-pressed");
+  if ((pressed === "true") !== (mode === "dark")) {
+    await page.getByRole("button", { name: "Dark mode" }).click();
+  }
   await page.waitForFunction(
     (wanted) => document.documentElement.getAttribute("data-color-mode") === wanted,
     mode,
@@ -206,6 +213,17 @@ test("every shipped page theme clears 4.5:1 in the scheme it declares", async ({
     await server.stop();
     copy.stop();
   }
+});
+
+test("the focus ring clears the 3:1 non-text threshold", async ({ page }) => {
+  await sampleDocument(page, "fixtures/kitchen-sink.md", async (theme) => {
+    for (const pair of DECLARED_NON_TEXT_PAIRS) {
+      const sample = await samplePair(page, pair.foreground, pair.background);
+      const ratio = ratioOf(sample.foreground, sample.background, `${theme} ${pair.foreground}`);
+      console.log(`${theme} ring ${pair.foreground} on ${pair.background}: ${ratio.toFixed(2)}`);
+      expect(ratio, `${theme} ${pair.foreground} on ${pair.background}`).toBeGreaterThanOrEqual(3);
+    }
+  });
 });
 
 test("the KaTeX error text clears 4.5:1 in both themes", async ({ page }) => {

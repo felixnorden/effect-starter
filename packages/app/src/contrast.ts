@@ -129,3 +129,9 @@ export const DECLARED_TEXT_PAIRS: readonly DeclaredTextPair[] = [
   { foreground: "--color-banner-fg", background: "--color-banner-bg" },
   { foreground: "--color-accent", background: "--color-button-bg" },
 ];
+
+/** AR-2's focus ring against both page surfaces; a non-text pair needs 3:1. */
+export const DECLARED_NON_TEXT_PAIRS: readonly DeclaredTextPair[] = [
+  { foreground: "--color-accent", background: "--color-base-100" },
+  { foreground: "--color-accent", background: "--color-base-200" },
+];

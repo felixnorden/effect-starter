@@ -4,12 +4,49 @@ import { describe, expect, it } from "vitest";
 
 import { App, type AppProps } from "./app.tsx";
 import { defaultDisplay, optionsForMode } from "./display.ts";
+import { pageThemesFor } from "./page-theme.ts";
 import { emptyPreviewState, type PreviewState } from "./store.ts";
+import type { Presets } from "./view-presets.ts";
 
 const display = defaultDisplay();
-const TestApp = (props: Omit<AppProps, "display" | "onThemeChange" | "onToggleLineNumbers">) => (
-  <App {...props} display={display} onThemeChange={() => {}} onToggleLineNumbers={() => {}} />
+const presets: Presets = { width: "normal", scale: "normal" };
+
+const BAR_NAMES = [
+  "Dark mode",
+  "Page theme",
+  "Light code theme",
+  "Dark code theme",
+  "Line numbers",
+  "Reading width",
+  "Font scale",
+] as const;
+
+const DEFAULTS: Omit<AppProps, "state"> = {
+  display,
+  onThemeChange: () => {},
+  onToggleLineNumbers: () => {},
+  mode: "light",
+  pageTheme: "light",
+  presets,
+  onToggleMode: () => {},
+  onPageThemeChange: () => {},
+  onPresetChange: () => {},
+};
+
+const TestApp = (props: Partial<Omit<AppProps, "state">> & Pick<AppProps, "state">) => (
+  <App {...DEFAULTS} {...props} />
 );
+
+/** A button's text, or a select's explicit accessible name. */
+const controlNames = (markup: string): readonly string[] => {
+  const buttons = [...markup.matchAll(/<button[^>]*>([^<]*)<\/button>/gu)].map(
+    (match) => match[1] ?? "",
+  );
+  const selects = [...markup.matchAll(/<select[^>]*aria-label="([^"]+)"/gu)].map(
+    (match) => match[1] ?? "",
+  );
+  return [...buttons, ...selects];
+};
 
 const blockOf = (id: string, text: string): WireBlock => ({
   id: id as BlockId,
@@ -139,23 +176,107 @@ describe("App", () => {
     expect(markup).toContain('href="/theme-sheets/github-dark-high-contrast.css"');
   });
 
-  it("renders both selectors with their own mode's options and the resolved ids", () => {
+  it("renders the five selectors and the two code-slot hooks", () => {
     const markup = renderToStaticMarkup(<TestApp state={emptyPreviewState} />);
     const selectors = markup.match(/<select[^>]*>[\s\S]*?<\/select>/gu) ?? [];
 
-    expect(selectors).toHaveLength(2);
-    expect(selectors[0]).toContain('data-theme-select="light"');
-    expect(selectors[1]).toContain('data-theme-select="dark"');
-    expect(markup).toContain("Light theme");
-    expect(markup).toContain("Dark theme");
+    expect(selectors).toHaveLength(5);
+    const codeSelectors = selectors.filter((selector) => selector.includes("data-theme-select"));
+    expect(codeSelectors).toHaveLength(2);
+    expect(codeSelectors[0]).toContain('data-theme-select="light"');
+    expect(codeSelectors[1]).toContain('data-theme-select="dark"');
+    expect(markup).toContain("Light code");
+    expect(markup).toContain("Dark code");
 
     for (const slot of ["light", "dark"] as const) {
       const selector =
-        selectors.find((entry) => entry.includes(`data-theme-select="${slot}"`)) ?? "";
+        codeSelectors.find((entry) => entry.includes(`data-theme-select="${slot}"`)) ?? "";
       const ids = [...selector.matchAll(/<option value="([^"]+)"/gu)].map((match) => match[1]);
       expect(ids).toEqual(optionsForMode(slot).map((option) => option.id));
       expect(selector).toContain(`value="${display[slot].id}"`);
     }
+  });
+
+  it("renders the bar's seven named controls in four groups, in order", () => {
+    const markup = renderToStaticMarkup(
+      <TestApp state={stateOf({ title: "Kitchen Sink", fileName: "kitchen-sink.md" })} />,
+    );
+
+    expect(controlNames(markup).toSorted()).toEqual([...BAR_NAMES].toSorted());
+    expect(markup).toContain('class="preview-identity"');
+    expect(markup.match(/role="group"/gu)?.length).toBe(3);
+
+    const order = [
+      markup.indexOf("<h1"),
+      markup.indexOf("Dark mode"),
+      markup.indexOf("Light code theme"),
+      markup.indexOf("Reading width"),
+      markup.indexOf('aria-live="polite"'),
+      markup.indexOf("Font scale"),
+    ];
+    expect(order[0]).toBeLessThan(order[1] ?? -1);
+    expect(order[1]).toBeLessThan(order[2] ?? -1);
+    expect(order[2]).toBeLessThan(order[3] ?? -1);
+    expect(order[3]).toBeLessThan(order[4] ?? -1);
+  });
+
+  it("announces the active mode without renaming itself", () => {
+    const light = renderToStaticMarkup(<TestApp state={emptyPreviewState} mode="light" />);
+    const dark = renderToStaticMarkup(<TestApp state={emptyPreviewState} mode="dark" />);
+
+    expect(light).toContain("Dark mode");
+    expect(dark).toContain("Dark mode");
+    expect(light).toMatch(/<button[^>]*aria-pressed="false"[^>]*>Dark mode<\/button>/u);
+    expect(dark).toMatch(/<button[^>]*aria-pressed="true"[^>]*>Dark mode<\/button>/u);
+  });
+
+  it("offers the page-theme picker only the active slot's scheme", () => {
+    const markup = renderToStaticMarkup(
+      <TestApp state={emptyPreviewState} mode="dark" pageTheme="dim" />,
+    );
+    const select = /<select[^>]*data-page-theme-select="dark"[^>]*>[\s\S]*?<\/select>/u.exec(
+      markup,
+    )?.[0];
+
+    expect(select).toBeDefined();
+    const labels = [...(select ?? "").matchAll(/<option[^>]*>([^<]+)<\/option>/gu)].map(
+      (match) => match[1],
+    );
+    expect(labels).toEqual(pageThemesFor("dark").map((theme) => theme.label));
+    expect(select).toContain('value="dim"');
+  });
+
+  it("gives every select a visible label contained in its accessible name", () => {
+    const markup = renderToStaticMarkup(<TestApp state={emptyPreviewState} />);
+    const pairs = [
+      ["Page theme", "Page theme"],
+      ["Light code", "Light code theme"],
+      ["Dark code", "Dark code theme"],
+      ["Width", "Reading width"],
+      ["Scale", "Font scale"],
+    ] as const;
+
+    for (const [visible, name] of pairs) {
+      // WCAG 2.5.3 containment is case-insensitive: "Width" reads inside
+      // "Reading width". axe lowercases both sides of the same comparison.
+      expect(name.toLowerCase()).toContain(visible.toLowerCase());
+      expect(markup).toMatch(new RegExp(`${visible}</label><select[^>]*aria-label="${name}"`, "u"));
+    }
+  });
+
+  it("hosts exactly one polite live region and keeps the banner an alert", () => {
+    const markup = renderToStaticMarkup(
+      <TestApp
+        state={stateOf({
+          ...blockState(),
+          banner: { stage: "render", message: "boom" },
+        })}
+      />,
+    );
+
+    expect(markup.match(/aria-live=/gu)?.length).toBe(1);
+    expect(markup).toContain('aria-live="polite"');
+    expect(markup).toContain('role="alert"');
   });
 
   it("renders the line-number toggle and the container attribute", () => {
@@ -165,12 +286,7 @@ describe("App", () => {
     expect(off).not.toContain("data-line-numbers=");
 
     const on = renderToStaticMarkup(
-      <App
-        state={emptyPreviewState}
-        display={{ ...display, lineNumbers: true }}
-        onThemeChange={() => {}}
-        onToggleLineNumbers={() => {}}
-      />,
+      <TestApp state={emptyPreviewState} display={{ ...display, lineNumbers: true }} />,
     );
     expect(on).toContain('aria-pressed="true"');
     expect(on).toContain('data-line-numbers="on"');

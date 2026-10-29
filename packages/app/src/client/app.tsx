@@ -1,19 +1,25 @@
-import type { ChangeEvent, RefObject } from "react";
+import type { RefObject } from "react";
 
 import type { Display, ThemeSlot } from "./display.ts";
-import { optionsForMode, sheetUrl } from "./display.ts";
+import { sheetUrl } from "./display.ts";
 import type { PageThemeScheme } from "./page-theme.ts";
 import type { PreviewState } from "./store.ts";
+import type { PresetAxis, Presets } from "./view-presets.ts";
 
+import { Bar } from "./bar.tsx";
 import { BlockList } from "./blocks.tsx";
 
 export type AppProps = {
   readonly state: PreviewState;
   readonly display: Display;
+  readonly mode: PageThemeScheme;
+  readonly pageTheme: string;
+  readonly presets: Presets;
+  readonly onToggleMode: () => void;
+  readonly onPageThemeChange: (name: string) => void;
   readonly onThemeChange: (slot: ThemeSlot, id: string) => void;
   readonly onToggleLineNumbers: () => void;
-  readonly mode?: PageThemeScheme;
-  readonly onToggleMode?: () => void;
+  readonly onPresetChange: (axis: PresetAxis, value: string) => void;
   /** The element the scroll anchor measures; the page owns the shell. */
   readonly containerRef?: RefObject<HTMLElement | null>;
   readonly statusRef?: RefObject<HTMLParagraphElement | null>;
@@ -22,10 +28,14 @@ export type AppProps = {
 export const App = ({
   state,
   display,
+  mode,
+  pageTheme,
+  presets,
+  onToggleMode,
+  onPageThemeChange,
   onThemeChange,
   onToggleLineNumbers,
-  mode,
-  onToggleMode,
+  onPresetChange,
   containerRef,
   statusRef,
 }: AppProps) => {
@@ -47,44 +57,20 @@ export const App = ({
         precedence="mdv-code-theme"
       />
 
-      <header className="preview-header">
-        {heading === null ? null : <h1 className="preview-title">{heading}</h1>}
-        {state.title === null || state.fileName === null ? null : (
-          <span className="preview-file-name">{state.fileName}</span>
-        )}
-        {mode === undefined || onToggleMode === undefined ? null : (
-          <button type="button" className="preview-theme-toggle" onClick={onToggleMode}>
-            {mode === "dark" ? "Light" : "Dark"}
-          </button>
-        )}
-        <button
-          type="button"
-          className="preview-theme-toggle"
-          aria-pressed={display.lineNumbers}
-          onClick={onToggleLineNumbers}
-        >
-          Line numbers
-        </button>
-        <p className="preview-status" aria-live="polite" ref={statusRef} />
-        {(["light", "dark"] as const).map((slot) => (
-          <label key={slot} className="preview-theme-select">
-            {slot === "light" ? "Light theme" : "Dark theme"}
-            <select
-              data-theme-select={slot}
-              value={display[slot].id}
-              onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-                onThemeChange(slot, event.target.value)
-              }
-            >
-              {optionsForMode(slot).map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        ))}
-      </header>
+      <Bar
+        heading={heading}
+        fileName={state.title === null || state.fileName === null ? null : state.fileName}
+        mode={mode}
+        pageTheme={pageTheme}
+        display={display}
+        presets={presets}
+        statusRef={statusRef}
+        onToggleMode={onToggleMode}
+        onPageThemeChange={onPageThemeChange}
+        onThemeChange={onThemeChange}
+        onToggleLineNumbers={onToggleLineNumbers}
+        onPresetChange={onPresetChange}
+      />
 
       <main className="preview-main" ref={containerRef}>
         {state.banner === null ? null : (

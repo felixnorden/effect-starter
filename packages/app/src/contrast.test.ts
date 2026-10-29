@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   contrastRatio,
+  DECLARED_NON_TEXT_PAIRS,
   DECLARED_TEXT_PAIRS,
   parseColor,
   relativeLuminance,
@@ -127,5 +128,17 @@ describe("contrastRatio", () => {
       background: "--mdv-background",
     });
     expect(DECLARED_TEXT_PAIRS.some((pair) => pair.background === "--color-code-bg")).toBe(false);
+  });
+
+  it("declares the focus ring against both page surfaces", () => {
+    expect(DECLARED_NON_TEXT_PAIRS).toHaveLength(2);
+    expect(DECLARED_NON_TEXT_PAIRS).toContainEqual({
+      foreground: "--color-accent",
+      background: "--color-base-100",
+    });
+    expect(DECLARED_NON_TEXT_PAIRS).toContainEqual({
+      foreground: "--color-accent",
+      background: "--color-base-200",
+    });
   });
 });

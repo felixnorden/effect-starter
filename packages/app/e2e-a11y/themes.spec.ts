@@ -13,11 +13,11 @@ import { copyFixture, startPreview } from "../e2e/preview-server.ts";
 test.use({ permissions: ["clipboard-read", "clipboard-write"] });
 
 const setMode = async (page: Page, wanted: "light" | "dark"): Promise<void> => {
-  const current = await page.evaluate(() =>
-    document.documentElement.getAttribute("data-color-mode"),
-  );
-  if (current !== wanted) {
-    await page.getByRole("button", { name: /^(Light|Dark)$/u }).click();
+  const pressed = await page
+    .getByRole("button", { name: "Dark mode" })
+    .getAttribute("aria-pressed");
+  if ((pressed === "true") !== (wanted === "dark")) {
+    await page.getByRole("button", { name: "Dark mode" }).click();
   }
   await page.waitForFunction(
     (mode) => document.documentElement.getAttribute("data-color-mode") === mode,

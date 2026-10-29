@@ -6,10 +6,11 @@ import { applyView, type View } from "./axes.ts";
 import { bootView } from "./boot.ts";
 import { handleContentClick, installImageFallback, type ControlDeps } from "./controls.ts";
 import { readDisplay, toggleLineNumbers, withTheme } from "./display.ts";
-import { pageThemeOf, toggleColorMode } from "./page-theme.ts";
+import { pageThemeOf, setPageTheme, toggleColorMode } from "./page-theme.ts";
 import { connectClient } from "./socket.ts";
 import { applyServerMessage, emptyPreviewState } from "./store.ts";
 import { useScrollAnchor } from "./scroll.ts";
+import { setPreset } from "./view-presets.ts";
 // The framework layers sit under the app rules; the app variables must still win.
 import "./daisyui.css";
 // The KaTeX stylesheet ships the math fonts; the app variables must still win.
@@ -33,6 +34,7 @@ const storage = (): Storage => window.sessionStorage;
 const Live = () => {
   const [state, setState] = useState(emptyPreviewState);
   const [display, setDisplay] = useState(() => booted.display);
+  const [slots, setSlots] = useState(() => booted.slots);
   const [view, setView] = useState<View>(() => booted.view);
 
   const container = useRef<HTMLElement>(null);
@@ -85,6 +87,8 @@ const Live = () => {
       containerRef={container}
       statusRef={status}
       mode={view.colorMode}
+      pageTheme={view.pageTheme}
+      presets={{ width: view.width, scale: view.scale }}
       onToggleLineNumbers={() =>
         setDisplay((current) => toggleLineNumbers(current, { storage: storage() }))
       }
@@ -93,7 +97,19 @@ const Live = () => {
       }
       onToggleMode={() => {
         const colorMode = toggleColorMode(view.colorMode, { storage: storage() });
-        apply({ ...view, colorMode, pageTheme: pageThemeOf(booted.slots, colorMode) });
+        apply({ ...view, colorMode, pageTheme: pageThemeOf(slots, colorMode) });
+      }}
+      onPageThemeChange={(name) => {
+        const next = setPageTheme(slots, view.colorMode, name, { storage: storage() });
+        if (next === slots) return;
+        setSlots(next);
+        apply({ ...view, pageTheme: pageThemeOf(next, view.colorMode) });
+      }}
+      onPresetChange={(axis, value) => {
+        const next = setPreset({ width: view.width, scale: view.scale }, axis, value, {
+          storage: storage(),
+        });
+        apply({ ...view, width: next.width, scale: next.scale });
       }}
     />
   );
