@@ -97,7 +97,8 @@ export type HighlightOptions = {
 export type HighlighterPort = {
   readonly codeToHast: (code: string, options: HighlightOptions) => Promise<Root>;
   readonly getLoadedLanguages: () => readonly string[];
-  readonly loadLanguage: (lang: string) => Promise<void>;
+  /** Loads every missing grammar in one call; the real port imports in parallel. */
+  readonly loadLanguage: (...langs: readonly string[]) => Promise<void>;
 };
 
 type GrammarKey =
@@ -181,13 +182,14 @@ const findPre = (root: Root): Element | null => {
 };
 
 /**
- * Highlighting is core's one I/O site: it dynamically imports bundled grammars
- * and themes on the JavaScript regex engine.
+ * Highlighting is core's one I/O site: it dynamically imports bundled grammars,
+ * themes, and the Oniguruma WASM engine.
  */
 export class CodeHighlighting extends Context.Service<
   CodeHighlighting,
   {
     readonly highlight: (request: HighlightRequest) => Effect.Effect<Element, HighlightError>;
+    readonly preload: (langs: readonly (string | null)[]) => Effect.Effect<void, HighlightError>;
   }
 >()("@mdv/core/CodeHighlighting") {
   static readonly layer: Layer.Layer<CodeHighlighting> = Layer.unwrap(
@@ -227,36 +229,63 @@ export class CodeHighlighting extends Context.Service<
       return pre;
     });
 
-    return Layer.succeed(CodeHighlighting, CodeHighlighting.of({ highlight }));
+    const preload = Effect.fn("CodeHighlighting.preload")(function* (
+      langs: readonly (string | null)[],
+    ) {
+      const grammars = [
+        ...new Set(langs.map(resolveGrammar).filter((grammar) => grammar !== TEXT)),
+      ];
+      const missing = grammars.filter(
+        (grammar) => !highlighter.getLoadedLanguages().includes(grammar),
+      );
+      if (missing.length === 0) return;
+
+      yield* Effect.tryPromise({
+        try: () => highlighter.loadLanguage(...missing),
+        catch: (cause) =>
+          new HighlightError({
+            message: `failed to load grammars ${missing.join(", ")}: ${describeCause(cause)}`,
+          }),
+      });
+    });
+
+    return Layer.succeed(CodeHighlighting, CodeHighlighting.of({ highlight, preload }));
   };
 }
 
 const createRealHighlighter = async (): Promise<HighlighterPort> => {
-  const [{ createHighlighterCore }, { createJavaScriptRegexEngine }] = await Promise.all([
+  const [{ createHighlighterCore }, { createOnigurumaEngine }] = await Promise.all([
     import("shiki/core"),
-    import("shiki/engine/javascript"),
+    import("shiki/engine/oniguruma"),
   ]);
 
   const highlighter = await createHighlighterCore({
     themes: [ROLE_THEME as never],
     langs: [],
-    engine: createJavaScriptRegexEngine(),
+    engine: createOnigurumaEngine(import("shiki/wasm")),
   });
 
   return {
     codeToHast: async (code, options) => highlighter.codeToHast(code, options),
     getLoadedLanguages: () => highlighter.getLoadedLanguages(),
-    loadLanguage: async (lang) => {
-      const load = GRAMMARS[lang as GrammarKey];
-      if (load === undefined) return;
-      await highlighter.loadLanguage((await load()) as never);
-      // The JavaScript regex engine resolves scopes differently on the first
-      // tokenization after a load. One throwaway pass pins the stable output,
-      // so a block hash cannot change without a content change.
-      highlighter.codeToHast("x", {
-        lang,
-        theme: ROLE_THEME.name,
+    loadLanguage: async (...langs) => {
+      const missing = langs.filter((lang) => {
+        const load = GRAMMARS[lang as GrammarKey];
+        return load !== undefined && !highlighter.getLoadedLanguages().includes(lang);
       });
+      // Grammar modules are independent, so the slow dynamic imports run in
+      // parallel. Registration stays sequential: Shiki mutates one registry.
+      const modules = await Promise.all(missing.map((lang) => GRAMMARS[lang as GrammarKey]!()));
+
+      for (const [index, lang] of missing.entries()) {
+        await highlighter.loadLanguage(modules[index] as never);
+        // One throwaway pass pins the tokenization before the first block hash,
+        // so a hash cannot change without a content change.
+        highlighter.codeToHast("x", {
+          lang,
+          theme: ROLE_THEME.name,
+        });
+      }
     },
   };
 };

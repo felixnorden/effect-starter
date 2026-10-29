@@ -38,8 +38,8 @@ const stubHighlighter = (overrides: Partial<HighlighterPort> = {}) => {
       return root;
     },
     getLoadedLanguages: () => [],
-    loadLanguage: async (lang) => {
-      calls.push({ method: "loadLanguage", args: [lang] });
+    loadLanguage: async (...langs) => {
+      calls.push({ method: "loadLanguage", args: langs });
     },
     ...overrides,
   };
@@ -53,6 +53,12 @@ const run = (
   Effect.gen(function* () {
     const highlighting = yield* CodeHighlighting;
     return yield* highlighting.highlight(request);
+  }).pipe(Effect.provide(CodeHighlighting.layerOf(port)));
+
+const runPreload = (port: HighlighterPort, langs: readonly (string | null)[]) =>
+  Effect.gen(function* () {
+    const highlighting = yield* CodeHighlighting;
+    return yield* highlighting.preload(langs);
   }).pipe(Effect.provide(CodeHighlighting.layerOf(port)));
 
 const codeToHastOptions = (calls: readonly Call[]): HighlightOptions | undefined =>
@@ -148,6 +154,42 @@ describe("CodeHighlighting", () => {
       expect(calls.map((call) => call.method)).toEqual(["loadLanguage", "codeToHast"]);
       expect(calls[0]?.args[0]).toBe("rust");
       expect(result.tagName).toBe("pre");
+    }),
+  );
+
+  it.effect("preloads unique allowlisted grammars in one call", () =>
+    Effect.gen(function* () {
+      const { port, calls } = stubHighlighter({ getLoadedLanguages: () => [] });
+
+      yield* runPreload(port, ["ts", "json", "ts", null, "notalang"]);
+
+      expect(calls).toEqual([{ method: "loadLanguage", args: ["typescript", "json"] }]);
+    }),
+  );
+
+  it.effect("preloads only the missing grammars", () =>
+    Effect.gen(function* () {
+      const { port, calls } = stubHighlighter({ getLoadedLanguages: () => ["json"] });
+
+      yield* runPreload(port, ["ts", "json"]);
+
+      expect(calls).toEqual([{ method: "loadLanguage", args: ["typescript"] }]);
+    }),
+  );
+
+  it.effect("maps a preload failure to HighlightError", () =>
+    Effect.gen(function* () {
+      const { port } = stubHighlighter({
+        getLoadedLanguages: () => [],
+        loadLanguage: async () => {
+          throw new Error("unavailable");
+        },
+      });
+
+      const error = yield* Effect.flip(runPreload(port, ["rust"]));
+
+      expect(error).toBeInstanceOf(HighlightError);
+      expect(error.message).toContain("unavailable");
     }),
   );
 

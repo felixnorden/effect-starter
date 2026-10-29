@@ -1,9 +1,9 @@
 # AGENTS.md
 
 `packages/core` is the shared Effect core. It has no framework and no UI. Its
-only I/O is a dynamic import of a bundled Shiki grammar or theme, which keeps the
-renderer's output pinned without reading user files. A module that needs a
-server, a user file, or a UI belongs in a consumer.
+only I/O is a dynamic import of a bundled Shiki grammar, theme, or engine WASM,
+which keeps the renderer's output pinned without reading user files. A module
+that needs a server, a user file, or a UI belongs in a consumer.
 
 Read `node_modules/effect/AGENTS.md` before writing Effect code. The repository
 pins Effect 4.

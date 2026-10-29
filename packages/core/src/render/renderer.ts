@@ -73,6 +73,17 @@ export class Renderer extends Context.Service<
 
         const blocks: Block[] = [];
 
+        const languages = [
+          ...new Set(
+            skeletons.flatMap((skeleton) => (skeleton.kind === "code" ? [skeleton.lang] : [])),
+          ),
+        ];
+        if (languages.length > 0) {
+          // Best effort: a failed preload must not move the error line. The
+          // per-block highlight retries and reports the exact line.
+          yield* highlighting.preload(languages).pipe(Effect.ignore);
+        }
+
         if (frontMatter !== null) {
           blocks.push(frontMatterBlock(frontMatter.range, salt));
         }

@@ -42,8 +42,13 @@ Keep it dependency-light: `effect`, `markdown-it`, the Markdown plugin set
 (`@mdit/plugin-katex`, `@mdit/plugin-footnote`, `markdown-it-deflist`,
 `markdown-it-emoji`), the HAST utilities, `yaml`, `katex`, and `shiki` are the
 runtime dependencies. No `node:fs`, no server, no UI. The
-only I/O is a dynamic import of a bundled Shiki grammar or theme. A module here
-must run under Bun and under vitest unchanged.
+only I/O is a dynamic import of a bundled Shiki grammar, theme, or the
+Oniguruma engine WASM. A module here must run under Bun and under vitest
+unchanged.
+
+Highlighting uses Shiki's Oniguruma WASM engine. The JavaScript regex engine
+compiled the TypeScript grammar for about 1.15 s on the first render; Oniguruma
+brings that first render to about 100 ms with identical output.
 
 `render/renderer.ts` demonstrates the pattern: a `Context.Service` with a static
 `Layer`, a typed error raised with `yield*`, and an `Effect.fn` method with a

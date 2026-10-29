@@ -43,6 +43,15 @@ const stubPort = (overrides: Partial<HighlighterPort> = {}): HighlighterPort => 
 const stubLayer = (port: HighlighterPort = stubPort()) =>
   Renderer.layer.pipe(Layer.provide(CodeHighlighting.layerOf(port)));
 
+const preloadState: { loaded: string[]; loads: string[][] } = { loaded: [], loads: [] };
+const preloadPort = stubPort({
+  getLoadedLanguages: () => preloadState.loaded,
+  loadLanguage: async (...langs) => {
+    preloadState.loads.push([...langs]);
+    preloadState.loaded.push(...langs);
+  },
+});
+
 const realLayer = Renderer.layer.pipe(Layer.provide(CodeHighlighting.layer));
 
 const render = (source: string, options = defaultRenderOptions) =>
@@ -198,6 +207,33 @@ layer(stubLayer())("renderer with a stub highlighter", (tests) => {
       assert.strictEqual(elementsOf(document, "b").length, 1);
       assert.isUndefined(elementsOf(document, "b")[0]?.properties.onclick);
       assert.strictEqual(documentToHtml(document).includes("bold"), true);
+    }),
+  );
+});
+
+layer(stubLayer(preloadPort))("renderer preload", (tests) => {
+  tests.effect("preloads each unique fence language once", () =>
+    Effect.gen(function* () {
+      preloadState.loaded.length = 0;
+      preloadState.loads.length = 0;
+      const source = [
+        "```ts",
+        "a",
+        "```",
+        "",
+        "```json",
+        "{}",
+        "```",
+        "",
+        "```ts",
+        "b",
+        "```",
+      ].join("\n");
+
+      const document = yield* render(source);
+
+      expect(preloadState.loads).toEqual([["typescript", "json"]]);
+      assert.strictEqual(document.blocks.length, 3);
     }),
   );
 });
