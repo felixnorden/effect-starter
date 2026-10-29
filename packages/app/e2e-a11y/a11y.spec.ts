@@ -4,7 +4,7 @@
  * `bun run check`. Every fixture is copied to a temporary path first.
  */
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { copyFixture, startPreview } from "../e2e/preview-server.ts";
 
@@ -47,7 +47,7 @@ const ringOf = (page: Page): Promise<Ring | null> =>
 const withDocument = async (
   page: Page,
   fixture: string,
-  run: () => Promise<void>,
+  run: (url: string) => Promise<void>,
 ): Promise<void> => {
   const copy = copyFixture(fixture);
   const server = await startPreview(copy.file);
@@ -55,12 +55,70 @@ const withDocument = async (
   try {
     await page.goto(server.url);
     await page.waitForSelector("[data-block-id]");
-    await run();
+    await run(server.url);
   } finally {
     await server.stop();
     copy.stop();
   }
 };
+
+const TYPOGRAPHY = "fixtures/render-fidelity/typography.md";
+
+type Affordance = {
+  readonly kind: "heading" | "link" | "table" | "code";
+  readonly name: string;
+  readonly payload: (url: string) => string;
+};
+
+const AFFORDANCES: readonly Affordance[] = [
+  {
+    kind: "heading",
+    name: "Copy link to Section Heading",
+    payload: (url) => new URL("#section-heading", url).href,
+  },
+  {
+    kind: "link",
+    name: "Copy address of relative link",
+    payload: (url) => new URL("/local/notes.md", url).href,
+  },
+  { kind: "table", name: "Copy table", payload: () => "Name\tValue\none\t1\ntwo\t2" },
+  { kind: "code", name: "Copy code", payload: () => "const answer = 42;\n" },
+];
+
+/** The hidden surface is the cluster for block kinds and the control itself otherwise. */
+const surfaceOpacity = (control: Locator): Promise<number> =>
+  control.evaluate((element) => {
+    const surface = element.closest("[data-mdv-actions]") ?? element;
+    return Number.parseFloat(getComputedStyle(surface).opacity);
+  });
+
+/** One helper for all four kinds: present, hidden, revealed, named, copying. */
+const expectAffordance = async (page: Page, url: string, affordance: Affordance): Promise<void> => {
+  const control = page.getByRole("button", { name: affordance.name, exact: true });
+  await expect(control, `${affordance.kind} exists before hover`).toHaveCount(1);
+  expect(await surfaceOpacity(control), `${affordance.kind} is hidden before hover`).toBe(0);
+
+  const container = page
+    .locator(
+      `${affordance.kind === "link" ? "[data-mdv-link]" : "[data-block-id]"}:has([aria-label="${affordance.name}"])`,
+    )
+    .first();
+  await container.hover();
+  await expect.poll(() => surfaceOpacity(control)).toBe(1);
+
+  await control.click();
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toBe(affordance.payload(url));
+
+  if (affordance.kind === "heading" || affordance.kind === "link") {
+    await expect(control).toHaveAttribute("data-mdv-state", "copied");
+  } else {
+    await expect(control).toHaveText("Copied");
+  }
+};
+
+test.use({ permissions: ["clipboard-read", "clipboard-write"] });
 
 test("the rendered page reports no structural axe violation", async ({ page }) => {
   const copy = copyFixture("fixtures/kitchen-sink.md");
@@ -222,6 +280,33 @@ test("Tab reaches one control per kind and each is visible while focused", async
     }
   });
 });
+
+test("the bar and the affordances expose distinct, stable names", async ({ page }) => {
+  await withDocument(page, TYPOGRAPHY, async () => {
+    const affordanceNames = await page.evaluate(() =>
+      [
+        ...document.querySelectorAll(
+          "[data-mdv-copy-code], [data-mdv-copy-table], [data-mdv-copy-link], [data-mdv-copy-url]",
+        ),
+      ].map((control) => control.getAttribute("aria-label") ?? ""),
+    );
+
+    expect(affordanceNames).toEqual(expect.arrayContaining(["Copy code", "Copy table"]));
+    expect(affordanceNames.some((name) => name.startsWith("Copy address of"))).toBe(true);
+    expect(affordanceNames.some((name) => name.startsWith("Copy link to"))).toBe(true);
+
+    const all = [...BAR_NAMES, ...affordanceNames];
+    expect(new Set(all).size, `distinct names: ${all.join(" | ")}`).toBe(all.length);
+  });
+});
+
+for (const affordance of AFFORDANCES) {
+  test(`the ${affordance.kind} affordance copies its payload`, async ({ page }) => {
+    await withDocument(page, TYPOGRAPHY, async (url) => {
+      await expectAffordance(page, url, affordance);
+    });
+  });
+}
 
 test("the bar wraps instead of clipping at a narrow viewport", async ({ page }) => {
   const measure = (): Promise<{ boxes: readonly [number, number][]; height: number }> =>

@@ -46,13 +46,15 @@
   },
   "devDependencies": {
     "@effect/tsgo": "catalog:",
+    "@tailwindcss/vite": "catalog:",
     "effect": "catalog:",
     "oxfmt": "0.74.0",
     "oxlint": "1.89.0",
     "oxlint-tsgolint": "7.0.2005",
     "shiki": "catalog:",
     "skills": "1.7.0",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vite": "catalog:"
   },
   "engines": {
     "bun": ">=1.4.0",
