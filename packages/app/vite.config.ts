@@ -4,12 +4,13 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 
 import { DEV_PORT } from "./src/dev-config.ts";
+import { prepaint } from "./vite-plugin-prepaint.ts";
 
 // Absolute paths keep a build started from the repo root correct.
 const here = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
 
 export default defineConfig({
-  plugins: [tailwindcss(), react()],
+  plugins: [tailwindcss(), prepaint(), react()],
   root: here("./src/client"),
   base: "/",
   build: {

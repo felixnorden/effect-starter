@@ -10,11 +10,14 @@
   --color-banner-fg: var(--color-warning-content);
   --color-button-bg: var(--color-base-200);
   --radius: var(--radius-box);
+  --preview-measure: 56rem;
+  --preview-scale: 1;
 }
 
 html {
   /* Native anchoring is Chromium-only and must not compete with the explicit restore. */
   overflow-anchor: none;
+  font-size: calc(100% * var(--preview-scale));
 }
 
 * {
@@ -128,18 +131,30 @@ a {
   font-size: 0.875rem;
 }
 
+[data-width="narrow"] {
+  --preview-measure: 48rem;
+}
+
+[data-width="wide"] {
+  --preview-measure: 72rem;
+}
+
+[data-scale="small"] {
+  --preview-scale: 0.9;
+}
+
+[data-scale="large"] {
+  --preview-scale: 1.15;
+}
+
 .preview-shell {
-  max-width: var(--preview-width, 56rem);
+  max-width: var(--preview-measure);
   margin: 0 auto;
   padding: 2rem 1.5rem 0;
 }
 
 .preview-main {
   padding-bottom: 4rem;
-}
-
-.preview-body {
-  font-size: var(--preview-font-size, 1rem);
 }
 
 .preview-header {

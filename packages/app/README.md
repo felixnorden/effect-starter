@@ -35,9 +35,10 @@ package script, a root `build`, and a CI step together.
 ## Page
 
 `src/client/` holds the page: a pure protocol reducer (`store.ts`), keyed block
-rendering (`blocks.tsx`), the HAST-to-React mapping (`hast.tsx`), the theme
-(`theme.ts`), the socket edge (`socket.ts`), and the only theme file
-(`styles.css`). Colours live in `styles.css` as CSS variables.
+rendering (`blocks.tsx`), the HAST-to-React mapping (`hast.tsx`), the view model
+(`page-theme.ts`, `view-presets.ts`, `axes.ts`), the socket edge (`socket.ts`),
+and the only app stylesheet (`styles.css`). Colours live in `styles.css` as CSS
+variables aliased onto daisyUI tokens.
 
 ## Tests
 

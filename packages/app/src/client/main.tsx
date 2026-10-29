@@ -2,20 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./app.tsx";
+import { applyView, type View } from "./axes.ts";
+import { bootView } from "./boot.ts";
 import { handleContentClick, installImageFallback, type ControlDeps } from "./controls.ts";
 import { readDisplay, toggleLineNumbers, withTheme } from "./display.ts";
-import { THEME_MODE_KEY, resolveSessionTheme } from "./session.ts";
+import { pageThemeOf, toggleColorMode } from "./page-theme.ts";
 import { connectClient } from "./socket.ts";
 import { applyServerMessage, emptyPreviewState } from "./store.ts";
-import { useCursorPlacement, useScrollAnchor } from "./scroll.ts";
-import {
-  applyTheme,
-  readStoredTheme,
-  resolveTheme,
-  systemTheme,
-  toggleTheme,
-  type Theme,
-} from "./theme.ts";
+import { useScrollAnchor } from "./scroll.ts";
 // The framework layers sit under the app rules; the app variables must still win.
 import "./daisyui.css";
 // The KaTeX stylesheet ships the math fonts; the app variables must still win.
@@ -25,22 +19,25 @@ import "./styles.css";
 const rootElement = document.getElementById("root");
 if (rootElement === null) throw new Error("missing #root");
 
-const initialTheme = resolveTheme({
+// The head snippet already painted these attributes; boot resolves the same
+// values for React state and stays the source of truth.
+const booted = bootView({
   matchMedia: (query) => window.matchMedia(query),
   storage: window.sessionStorage,
+  display: readDisplay({ storage: window.sessionStorage }),
+  root: document.documentElement,
 });
-applyTheme(initialTheme, document.documentElement);
+
+const storage = (): Storage => window.sessionStorage;
 
 const Live = () => {
   const [state, setState] = useState(emptyPreviewState);
-  const [display, setDisplay] = useState(() => readDisplay({ storage: window.sessionStorage }));
-  const [theme, setTheme] = useState<Theme>(initialTheme);
-  const [ended, setEnded] = useState<string | null>(null);
+  const [display, setDisplay] = useState(() => booted.display);
+  const [view, setView] = useState<View>(() => booted.view);
 
   const container = useRef<HTMLElement>(null);
   const status = useRef<HTMLParagraphElement>(null);
   const beginPatch = useScrollAnchor(container, state.lastSeq);
-  useCursorPlacement(container, state.cursor, state.session, state.lastSeq);
 
   useEffect(() => {
     const element = container.current;
@@ -66,23 +63,8 @@ const Live = () => {
   }, []);
 
   useEffect(() => {
-    if (state.session === null) return undefined;
-    const next = resolveSessionTheme({
-      configured: state.session.themeMode,
-      stored: readStoredTheme(window.sessionStorage),
-      storedMode: window.sessionStorage.getItem(THEME_MODE_KEY),
-      system: systemTheme({ matchMedia: (query) => window.matchMedia(query) }),
-    });
-    applyTheme(next, document.documentElement);
-    setTheme(next);
-    return undefined;
-  }, [state.session?.themeMode]);
-
-  useEffect(() => {
     const client = connectClient({
-      onClose: () => setEnded("the server closed the connection"),
       onMessage: (message) => {
-        setEnded(null);
         // A snapshot rebuilds everything, so only a patch has a usable anchor.
         if (message._tag === "patch") beginPatch();
         setState((current) => applyServerMessage(current, message));
@@ -91,25 +73,27 @@ const Live = () => {
     return () => client.close();
   }, [beginPatch]);
 
+  const apply = (next: View): void => {
+    applyView(next, document.documentElement);
+    setView(next);
+  };
+
   return (
     <App
       state={state}
       display={display}
       containerRef={container}
       statusRef={status}
-      theme={theme}
-      ended={ended}
+      mode={view.colorMode}
       onToggleLineNumbers={() =>
-        setDisplay((current) => toggleLineNumbers(current, { storage: window.sessionStorage }))
+        setDisplay((current) => toggleLineNumbers(current, { storage: storage() }))
       }
       onThemeChange={(slot, id) =>
-        setDisplay((current) => withTheme(current, slot, id, { storage: window.sessionStorage }))
+        setDisplay((current) => withTheme(current, slot, id, { storage: storage() }))
       }
-      onToggleTheme={() => {
-        const next = toggleTheme(theme, { storage: window.sessionStorage });
-        window.sessionStorage.setItem(THEME_MODE_KEY, state.session?.themeMode ?? "system");
-        applyTheme(next, document.documentElement);
-        setTheme(next);
+      onToggleMode={() => {
+        const colorMode = toggleColorMode(view.colorMode, { storage: storage() });
+        apply({ ...view, colorMode, pageTheme: pageThemeOf(booted.slots, colorMode) });
       }}
     />
   );
