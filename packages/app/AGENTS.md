@@ -19,5 +19,11 @@ those live in `@mdv/core`.
   file system. Bun-only code stays out of anything a test imports.
 - Adding a build means the package script, a root `build`, and a CI step
   together. Never add only one.
+- `client-assets.ts` resolves `<dir of process.execPath>/client` for a compiled
+  server and `../dist/client` for a checkout. Keep both paths working. A compiled
+  binary without an adjacent client reports a reinstall message instead of
+  trying Vite.
+- `bun run build:server` is the editor artifact build. It writes the gitignored
+  `packages/editor/bin/` and its own CI step; do not commit either artifact.
 - Colours live in `src/client/styles.css` as variables. Components use the
   variables; they never contain a colour literal.

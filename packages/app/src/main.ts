@@ -16,10 +16,11 @@ import * as HttpPlatform from "effect/http/HttpPlatform";
 import * as HttpServer from "effect/http/HttpServer";
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { basename, dirname, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { openBrowser } from "./browser.ts";
+import { defaultClientDir, isCompiled } from "./client-assets.ts";
 import { parseArgs, UsageError } from "./cli.ts";
 import { DEV_PORT } from "./dev-config.ts";
 import { runEditorSession, type PageHandle } from "./editor-session.ts";
@@ -33,38 +34,48 @@ import { mintSessionId } from "./session-identity.ts";
 import { fileSource, hashSource } from "./sources/file-source.ts";
 import { createFrameSource } from "./sources/frame-source.ts";
 
-const clientDir = fileURLToPath(new URL("../dist/client", import.meta.url));
-const clientIndex = fileURLToPath(new URL("../dist/client/index.html", import.meta.url));
+const clientDir = defaultClientDir();
+const clientIndex = join(clientDir, "index.html");
 const viteConfig = fileURLToPath(new URL("../vite.config.ts", import.meta.url));
+const compiled = isCompiled(import.meta.url);
+
+const missingClient = (): BuildError =>
+  new BuildError({
+    message: `client assets are missing beside ${process.execPath}; reinstall the server`,
+  });
 
 /** One megabyte per process; rotation waits for OP-7. */
 const LOG_CAP_BYTES = 1024 * 1024;
 
 const buildClient = (): Effect.Effect<void, BuildError> =>
-  Effect.tryPromise({
-    try: async () => {
-      console.log("building client…");
-      const { build } = await import("vite");
-      await build({ configFile: viteConfig });
-    },
-    catch: (cause) =>
-      new BuildError({
-        message: cause instanceof Error ? cause.message : String(cause),
-      }),
-  });
+  compiled
+    ? Effect.fail(missingClient())
+    : Effect.tryPromise({
+        try: async () => {
+          console.log("building client…");
+          const { build } = await import("vite");
+          await build({ configFile: viteConfig });
+        },
+        catch: (cause) =>
+          new BuildError({
+            message: cause instanceof Error ? cause.message : String(cause),
+          }),
+      });
 
 /** Editor mode's standard output is the frame stream: Vite must stay silent. */
 const buildClientQuietly = (): Effect.Effect<void, BuildError> =>
-  Effect.tryPromise({
-    try: async () => {
-      const { build } = await import("vite");
-      await build({ configFile: viteConfig, logLevel: "silent" });
-    },
-    catch: (cause) =>
-      new BuildError({
-        message: cause instanceof Error ? cause.message : String(cause),
-      }),
-  });
+  compiled
+    ? Effect.fail(missingClient())
+    : Effect.tryPromise({
+        try: async () => {
+          const { build } = await import("vite");
+          await build({ configFile: viteConfig, logLevel: "silent" });
+        },
+        catch: (cause) =>
+          new BuildError({
+            message: cause instanceof Error ? cause.message : String(cause),
+          }),
+      });
 
 const readSource = (file: string): Effect.Effect<string, ReadError> =>
   Effect.try({
