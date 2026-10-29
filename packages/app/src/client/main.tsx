@@ -16,6 +16,8 @@ import {
   toggleTheme,
   type Theme,
 } from "./theme.ts";
+// The framework layers sit under the app rules; the app variables must still win.
+import "./daisyui.css";
 // The KaTeX stylesheet ships the math fonts; the app variables must still win.
 import "katex/dist/katex.min.css";
 import "./styles.css";

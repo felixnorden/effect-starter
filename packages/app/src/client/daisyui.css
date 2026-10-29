@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@plugin "daisyui" {
+  themes:
+    light --default,
+    dark --prefersdark,
+    corporate,
+    garden,
+    dim,
+    dracula;
+  root: ":root";
+  exclude: rootscrollgutter, rootscrolllock, scrollbar, checkbox, radio;
+  logs: false;
+}

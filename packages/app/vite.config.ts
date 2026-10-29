@@ -1,3 +1,4 @@
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
@@ -8,7 +9,7 @@ import { DEV_PORT } from "./src/dev-config.ts";
 const here = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [tailwindcss(), react()],
   root: here("./src/client"),
   base: "/",
   build: {
