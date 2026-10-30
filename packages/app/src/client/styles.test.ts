@@ -293,14 +293,11 @@ describe("theme styles", () => {
     expect(css).toContain("opacity: 0");
     expect(css).toContain("pointer-events: none");
     expect(css).not.toContain("visibility: hidden");
-    for (const selector of [
-      "[data-block-id]:hover",
-      "[data-block-id]:focus-within",
-      "[data-mdv-link]:hover",
-      "[data-mdv-link]:focus-within",
-    ]) {
+    for (const selector of ["[data-block-id]:hover", "[data-block-id]:focus-within"]) {
       expect(css, selector).toContain(selector);
     }
+    // A link carries no control, so no reveal rule should name one.
+    expect(css).not.toContain("[data-mdv-link]");
     expect(css).toContain("position: absolute");
     expect(css).toContain("@media (prefers-reduced-motion: no-preference)");
     expect(css).toContain("@media (hover: none)");

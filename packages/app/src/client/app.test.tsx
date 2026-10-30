@@ -11,15 +11,24 @@ import type { Presets } from "./view-presets.ts";
 const display = defaultDisplay();
 const presets: Presets = { width: "normal", scale: "normal" };
 
-const BAR_NAMES = [
+const PANEL_NAMES = [
   "Dark mode",
   "Page theme",
-  "Light code theme",
-  "Dark code theme",
+  "Narrow",
+  "Normal",
+  "Wide",
+  "Small",
+  // One per axis: the width join and the scale join each offer a "Normal".
+  "Normal",
+  "Large",
+  "Code theme",
   "Line numbers",
-  "Reading width",
-  "Font scale",
 ] as const;
+
+/** The header's one control, at the top of the panel in both states. */
+const TOGGLE_NAME = "Settings";
+
+const RAIL_NAMES = [TOGGLE_NAME, "Dark mode", "Line numbers"] as const;
 
 const DEFAULTS: Omit<AppProps, "state"> = {
   display,
@@ -28,6 +37,8 @@ const DEFAULTS: Omit<AppProps, "state"> = {
   mode: "light",
   pageTheme: "light",
   presets,
+  sidebar: "open",
+  onToggleSidebar: () => {},
   onToggleMode: () => {},
   onPageThemeChange: () => {},
   onPresetChange: () => {},
@@ -37,15 +48,22 @@ const TestApp = (props: Partial<Omit<AppProps, "state">> & Pick<AppProps, "state
   <App {...DEFAULTS} {...props} />
 );
 
-/** A button's text, or a select's explicit accessible name. */
+/** A button's aria-label or its text, and a select's explicit accessible name. */
 const controlNames = (markup: string): readonly string[] => {
-  const buttons = [...markup.matchAll(/<button[^>]*>([^<]*)<\/button>/gu)].map(
-    (match) => match[1] ?? "",
-  );
+  const buttons = [...markup.matchAll(/<button[^>]*>[\s\S]*?<\/button>/gu)].map((match) => {
+    const label = /aria-label="([^"]+)"/u.exec(match[0])?.[1];
+    return label ?? match[0].replace(/^<button[^>]*>|<\/button>$/gu, "");
+  });
   const selects = [...markup.matchAll(/<select[^>]*aria-label="([^"]+)"/gu)].map(
     (match) => match[1] ?? "",
   );
   return [...buttons, ...selects];
+};
+
+/** The panel's own markup, from its id to its closing tag. */
+const panelOf = (markup: string): string => {
+  const start = markup.indexOf('id="preview-panel"');
+  return start === -1 ? "" : markup.slice(start, markup.indexOf("</aside>", start));
 };
 
 const blockOf = (id: string, text: string): WireBlock => ({
@@ -168,60 +186,132 @@ describe("App", () => {
 
     // React's hoisted links keep every href they have seen; theme-sheets.ts owns them.
     expect(markup).not.toContain("<link");
+    expect(markup).toContain('data-animated="false"');
   });
 
-  it("renders the five selectors and the two code-slot hooks", () => {
-    const markup = renderToStaticMarkup(<TestApp state={emptyPreviewState} />);
-    const selectors = markup.match(/<select[^>]*>[\s\S]*?<\/select>/gu) ?? [];
+  it("keeps two selects: page theme in the mode row, and the active code theme", () => {
+    const light = renderToStaticMarkup(<TestApp state={emptyPreviewState} />);
+    const dark = renderToStaticMarkup(<TestApp state={emptyPreviewState} mode="dark" />);
 
-    expect(selectors).toHaveLength(5);
-    const codeSelectors = selectors.filter((selector) => selector.includes("data-theme-select"));
-    expect(codeSelectors).toHaveLength(2);
-    expect(codeSelectors[0]).toContain('data-theme-select="light"');
-    expect(codeSelectors[1]).toContain('data-theme-select="dark"');
-    expect(markup).toContain("Light code");
-    expect(markup).toContain("Dark code");
-
-    for (const slot of ["light", "dark"] as const) {
-      const selector =
-        codeSelectors.find((entry) => entry.includes(`data-theme-select="${slot}"`)) ?? "";
-      const ids = [...selector.matchAll(/<option value="([^"]+)"/gu)].map((match) => match[1]);
+    for (const [markup, slot] of [
+      [light, "light"],
+      [dark, "dark"],
+    ] as const) {
+      const selectors = markup.match(/<select[^>]*>[\s\S]*?<\/select>/gu) ?? [];
+      expect(selectors).toHaveLength(2);
+      const [code] = selectors.filter((selector) => selector.includes("data-theme-select"));
+      expect(code, `${slot} code theme select`).toContain(`data-theme-select="${slot}"`);
+      expect(code).toContain('aria-label="Code theme"');
+      const ids = [...(code ?? "").matchAll(/<option value="([^"]+)"/gu)].map((m) => m[1]);
       expect(ids).toEqual(optionsForMode(slot).map((option) => option.id));
-      expect(selector).toContain(`value="${display[slot].id}"`);
+      expect(code).toContain(`value="${display[slot].id}"`);
     }
+
+    // The mode button and the page theme select share one row.
+    expect(light).toMatch(
+      /<div class="preview-row"><button[^>]*aria-label="Dark mode"[\s\S]*?<select[^>]*data-page-theme-select="light"[^>]*>/u,
+    );
+    // No visible Page theme label: the row itself is the context.
+    expect(light).not.toContain(">Page theme</label>");
   });
 
-  it("renders the bar's seven named controls in four groups, in order", () => {
+  it("renders the panel's named controls in two titled sections, in order", () => {
     const markup = renderToStaticMarkup(
       <TestApp state={stateOf({ title: "Kitchen Sink", fileName: "kitchen-sink.md" })} />,
     );
 
-    expect(controlNames(markup).toSorted()).toEqual([...BAR_NAMES].toSorted());
-    expect(markup).toContain('class="preview-identity"');
-    expect(markup.match(/role="group"/gu)?.length).toBe(3);
+    const panel = panelOf(markup);
+    expect(controlNames(panel).toSorted()).toEqual([...PANEL_NAMES, TOGGLE_NAME].toSorted());
 
-    const order = [
-      markup.indexOf("<h1"),
-      markup.indexOf("Dark mode"),
-      markup.indexOf("Light code theme"),
-      markup.indexOf("Reading width"),
-      markup.indexOf('aria-live="polite"'),
-      markup.indexOf("Font scale"),
+    const groups = [
+      ...panel.matchAll(/<section class="preview-group"[^>]*>([\s\S]*?)<\/section>/gu),
     ];
-    expect(order[0]).toBeLessThan(order[1] ?? -1);
-    expect(order[1]).toBeLessThan(order[2] ?? -1);
-    expect(order[2]).toBeLessThan(order[3] ?? -1);
-    expect(order[3]).toBeLessThan(order[4] ?? -1);
+    expect(groups).toHaveLength(2);
+    expect(groups[0]?.[1]).toContain(">Appearance</h2>");
+    expect(groups[1]?.[1]).toContain(">Reading</h2>");
+
+    // One area per section, in the order the panel paints them.
+    const order = [
+      panel.indexOf(">Appearance</h2>"),
+      panel.indexOf('aria-label="Page theme"'),
+      panel.indexOf(">Code theme</label>"),
+      panel.indexOf('aria-label="Line numbers"'),
+      panel.indexOf(">Reading</h2>"),
+      panel.indexOf(">Reading width</span>"),
+      panel.indexOf(">Font scale</span>"),
+    ];
+    for (const [index, at] of order.entries()) {
+      expect(at, `control ${index} is present`).toBeGreaterThanOrEqual(0);
+    }
+    expect([...order].toSorted((left, right) => left - right)).toEqual(order);
   });
 
-  it("announces the active mode without renaming itself", () => {
+  it("shows line numbers as a hash button with a tooltip, not as text", () => {
+    const markup = renderToStaticMarkup(<TestApp state={emptyPreviewState} />);
+
+    expect(markup).toMatch(/<button[^>]*aria-label="Line numbers"[^>]*title="Line numbers"/u);
+    expect(markup).not.toContain(">Line numbers<");
+    expect(markup).toMatch(
+      /aria-label="Line numbers"[^>]*>[\s\S]*?<span class="preview-hash"[^>]*>#<\/span>/u,
+    );
+  });
+
+  it("puts the header first, then the panel, then the document", () => {
+    const markup = renderToStaticMarkup(<TestApp state={emptyPreviewState} />);
+    const header = markup.indexOf("<header");
+    const panel = markup.indexOf('id="preview-panel"');
+    const main = markup.indexOf("<main");
+    const headerMarkup = markup.slice(header, markup.indexOf("</header>"));
+
+    expect(header).toBeGreaterThanOrEqual(0);
+    expect(header).toBeLessThan(panel);
+    expect(panel).toBeLessThan(main);
+    // The panel is a sibling of main, never inside the document's landmark.
+    expect(markup.slice(main)).not.toContain('id="preview-panel"');
+    expect(markup).toContain('aria-live="polite"');
+    expect(markup.indexOf('aria-live="polite"')).toBeLessThan(panel);
+    // The header holds no control: the toggle travels with the panel.
+    expect(headerMarkup).not.toContain("<button");
+    expect(panelOf(markup)).toContain(`aria-label="${TOGGLE_NAME}"`);
+  });
+
+  it("collapses to a rail that keeps the toggle and the two switches", () => {
+    const open = renderToStaticMarkup(<TestApp state={emptyPreviewState} />);
+    const rail = renderToStaticMarkup(<TestApp state={emptyPreviewState} sidebar="rail" />);
+
+    expect(panelOf(open).match(/<select/gu)).toHaveLength(2);
+    expect(panelOf(rail).match(/<select/gu)).toBeNull();
+    expect(controlNames(panelOf(rail)).toSorted()).toEqual([...RAIL_NAMES].toSorted());
+    expect(rail).toMatch(/<aside[^>]*data-state="rail"/u);
+    expect(rail).not.toContain("preview-group-title");
+    expect(rail).not.toMatch(/>Dark mode</u);
+  });
+
+  it("wires the Settings toggle to the panel's state", () => {
+    const open = renderToStaticMarkup(<TestApp state={emptyPreviewState} />);
+    const rail = renderToStaticMarkup(<TestApp state={emptyPreviewState} sidebar="rail" />);
+
+    expect(open).toMatch(
+      /<button[^>]*aria-label="Settings"[^>]*aria-expanded="true"[^>]*aria-controls="preview-panel"/u,
+    );
+    expect(rail).toMatch(
+      /<button[^>]*aria-label="Settings"[^>]*aria-expanded="false"[^>]*aria-controls="preview-panel"/u,
+    );
+  });
+
+  it("toggles the mode from a sun/moon swap that announces its state", () => {
     const light = renderToStaticMarkup(<TestApp state={emptyPreviewState} mode="light" />);
     const dark = renderToStaticMarkup(<TestApp state={emptyPreviewState} mode="dark" />);
 
-    expect(light).toContain("Dark mode");
-    expect(dark).toContain("Dark mode");
-    expect(light).toMatch(/<button[^>]*aria-pressed="false"[^>]*>Dark mode<\/button>/u);
-    expect(dark).toMatch(/<button[^>]*aria-pressed="true"[^>]*>Dark mode<\/button>/u);
+    expect(light).toMatch(/<button[^>]*aria-label="Dark mode"[^>]*aria-pressed="false"/u);
+    expect(dark).toMatch(/<button[^>]*aria-label="Dark mode"[^>]*aria-pressed="true"/u);
+
+    // The icon carries the mode; the name carries the action.
+    expect(light).not.toContain(">Dark mode</span>");
+    expect(light).toContain('class="swap swap-rotate"');
+    expect(dark).toContain('class="swap swap-rotate swap-active"');
+    expect(light).toContain('class="swap-off size-4 fill-current"');
+    expect(light).toContain('class="swap-on size-4 fill-current"');
   });
 
   it("offers the page-theme picker only the active slot's scheme", () => {
@@ -240,22 +330,41 @@ describe("App", () => {
     expect(select).toContain('value="dim"');
   });
 
-  it("gives every select a visible label contained in its accessible name", () => {
+  it("labels the code theme visibly and names the page theme without a label", () => {
     const markup = renderToStaticMarkup(<TestApp state={emptyPreviewState} />);
-    const pairs = [
-      ["Page theme", "Page theme"],
-      ["Light code", "Light code theme"],
-      ["Dark code", "Dark code theme"],
-      ["Width", "Reading width"],
-      ["Scale", "Font scale"],
-    ] as const;
 
-    for (const [visible, name] of pairs) {
-      // WCAG 2.5.3 containment is case-insensitive: "Width" reads inside
-      // "Reading width". axe lowercases both sides of the same comparison.
-      expect(name.toLowerCase()).toContain(visible.toLowerCase());
-      expect(markup).toMatch(new RegExp(`${visible}</label><select[^>]*aria-label="${name}"`, "u"));
+    expect(markup).toMatch(/Code theme<\/label><select[^>]*aria-label="Code theme"/u);
+    // The mode row gives the page theme its context; a second label would repeat it.
+    expect(markup).toMatch(/<select[^>]*aria-label="Page theme"/u);
+    expect(markup).not.toContain(">Page theme</label>");
+  });
+
+  it("offers width and scale as three-way joins instead of dropdowns", () => {
+    const markup = renderToStaticMarkup(<TestApp state={emptyPreviewState} />);
+    const join = (axis: string): string =>
+      new RegExp(`data-preset-axis="${axis}">([\\s\\S]*?)</div>`, "u").exec(markup)?.[1] ?? "";
+    const width = join("width");
+    const scale = join("scale");
+
+    expect(markup).toMatch(/<div class="join w-full" role="group" aria-labelledby="[^"]+"/u);
+    expect(markup).toContain(">Reading width</span>");
+    expect(markup).toContain(">Font scale</span>");
+
+    for (const [axis, names] of [
+      ["width", ["Narrow", "Normal", "Wide"]],
+      ["scale", ["Small", "Normal", "Large"]],
+    ] as const) {
+      const group = axis === "width" ? width : scale;
+      expect(group.match(/<button/gu), `${axis} keeps three values visible`).toHaveLength(3);
+      expect(group).not.toContain("<select");
+      for (const name of names) expect(group).toContain(`aria-label="${name}"`);
     }
+
+    // The stored value is the only pressed segment on its axis.
+    expect(width).toMatch(/aria-label="Normal"[^>]*aria-pressed="true"/u);
+    expect(width).toMatch(/aria-label="Narrow"[^>]*aria-pressed="false"/u);
+    expect(width).toMatch(/aria-label="Wide"[^>]*aria-pressed="false"/u);
+    expect(scale.match(/aria-pressed="true"/gu)).toHaveLength(1);
   });
 
   it("hosts exactly one polite live region and keeps the banner an alert", () => {

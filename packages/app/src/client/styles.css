@@ -104,6 +104,20 @@ a {
   margin-block: 0.25em;
 }
 
+/* The checkbox replaces the bullet of its own item, so the sibling items keep
+   theirs, and the text starts after a gap. */
+.preview-body .task-list-item {
+  list-style: none;
+}
+
+.preview-body .task-list-item > input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0 0.5rem 0 0;
+  vertical-align: middle;
+  accent-color: var(--color-accent);
+}
+
 .preview-body code:not(pre code) {
   padding: 0.1em 0.35em;
   font-size: 0.9em;
@@ -153,16 +167,12 @@ a {
   padding: 2rem 1.5rem 0;
 }
 
-.preview-main {
-  padding-bottom: 4rem;
-}
-
 .preview-header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem;
-  padding-bottom: 1rem;
+  gap: 0.5rem 1rem;
+  padding-bottom: 0.75rem;
   margin-bottom: 1.5rem;
   border-bottom: 1px solid var(--color-border);
 }
@@ -171,24 +181,210 @@ a {
   display: flex;
   align-items: baseline;
   gap: 0.75rem;
+  min-width: 0;
+}
+
+/* The panel floats at the inline-end screen edge, and its height follows its
+   content, so opening it never narrows the document. */
+.preview-sidebar {
+  position: fixed;
+  inset-block-start: 6.5rem;
+  inset-block-end: auto;
+  inset-inline-end: 1rem;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 18rem;
+  max-height: calc(100dvh - 7.5rem);
+  padding: 1rem;
+  overflow: hidden auto;
+  font-size: 0.875rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: 0 0.5rem 2rem color-mix(in oklab, var(--color-base-content) 26%, transparent);
+}
+
+/* The toggle sits at the top-inline-end of the card, in both states. */
+.preview-panel-toggle {
+  align-self: flex-end;
+}
+
+/* The card's box is animated from `sidebar.tsx`, because its height follows
+   the content and CSS cannot transition that. The new body fades in only
+   after the box has settled, so no control reflows while it travels. */
+.preview-shell[data-animated="true"] .preview-sidebar > :not(.preview-panel-toggle) {
+  animation: preview-panel-enter 120ms ease-out 160ms both;
+}
+
+@keyframes preview-panel-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* The rail is content-sized: the toggle and the two switches, nothing more.
+   Every child keeps its inline-end edge, so nothing jumps when the card
+   widens or narrows. */
+.preview-sidebar[data-state="rail"] {
+  align-items: flex-end;
+  gap: 0.5rem;
+  width: 3.25rem;
+  padding: 0.5rem;
+}
+
+/* A box smaller than its content would grow a scrollbar mid-morph. */
+.preview-sidebar[data-morphing="true"] {
+  overflow: hidden;
+}
+
+/* The rail's inline padding is half the panel's, so the toggle would hop by
+   half a step when the state flips. It stays visible across both states, so it
+   is the one control that must glide instead. */
+.preview-shell[data-animated="true"] .preview-sidebar[data-state="open"] .preview-panel-toggle {
+  animation: preview-toggle-in 160ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.preview-shell[data-animated="true"] .preview-sidebar[data-state="rail"] .preview-panel-toggle {
+  animation: preview-toggle-out 160ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes preview-toggle-in {
+  from {
+    transform: translateX(0.5rem);
+  }
+}
+
+@keyframes preview-toggle-out {
+  from {
+    transform: translateX(-0.5rem);
+  }
+}
+
+.preview-status {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.preview-main {
+  min-width: 0;
+  padding-bottom: 4rem;
 }
 
 .preview-group {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 0.5rem;
+  min-width: 0;
+}
+
+.preview-group-title {
+  margin: 0 0 0.25rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .preview-field {
   display: flex;
-  align-items: center;
-  gap: 0.35rem;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
   font-size: 0.875rem;
 }
 
-.preview-status {
-  margin: 0;
-  color: var(--color-muted);
+.preview-field select {
+  width: 100%;
+}
+
+.preview-field-label {
+  font-size: 0.875rem;
+}
+
+.preview-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.preview-row .preview-field {
+  flex: 1;
+}
+
+/* A row whose button sits level with the select box, below the label. */
+.preview-row-end {
+  align-items: flex-end;
+}
+
+.preview-field .join {
+  width: 100%;
+}
+
+.preview-preset-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-hash {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* The backdrop only exists while the drawer covers the document. */
+.preview-backdrop {
+  display: none;
+  padding: 0;
+  border: 0;
+  background: color-mix(in oklab, var(--color-base-content) 35%, transparent);
+}
+
+/* Below 60rem the floating card would cover too much text, so it keeps the
+   same shape and gains a scrim behind it. */
+@media (max-width: 59.99rem) {
+  .preview-sidebar {
+    inset-block-start: 4.5rem;
+    max-height: calc(100dvh - 5.5rem);
+    width: min(20rem, 86vw);
+  }
+
+  .preview-shell[data-sidebar="open"] .preview-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    animation: preview-scrim-in 180ms ease-out;
+  }
+}
+
+@keyframes preview-scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Motion is decoration here: every state stays usable without it. */
+@media (prefers-reduced-motion: reduce) {
+  .preview-sidebar > *,
+  .preview-shell[data-animated="true"] .preview-sidebar > *,
+  .preview-shell[data-sidebar="open"] .preview-backdrop {
+    transition: none;
+    animation: none;
+  }
 }
 
 :where(a, button, select, summary, [tabindex]):focus-visible {
@@ -254,50 +450,109 @@ a {
   position: relative;
 }
 
-[data-mdv-link] {
-  position: relative;
-}
-
-:is([data-mdv-actions], [data-mdv-copy-link], [data-mdv-copy-url]) {
+:is([data-mdv-actions], [data-mdv-copy-link]) {
   opacity: 0;
   pointer-events: none;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  :is([data-mdv-actions], [data-mdv-copy-link], [data-mdv-copy-url]) {
+  :is([data-mdv-actions], [data-mdv-copy-link]) {
     transition: opacity 120ms ease-out;
   }
 }
 
 [data-mdv-actions] {
   position: absolute;
-  inset-block-start: 0;
-  inset-inline-end: 0;
+  inset-block-start: 0.25rem;
+  inset-inline-end: 0.25rem;
   display: flex;
   gap: 0.25rem;
 }
 
+/* A nested heading has no row of its own, so its control falls back to the
+   block's top-right corner. */
 [data-mdv-copy-link] {
   position: absolute;
-  inset-block-start: 0.35em;
-  inset-inline-start: -1.5rem;
+  inset-block-start: 0.25rem;
+  inset-inline-end: 0.25rem;
 }
 
-[data-mdv-copy-url] {
-  position: absolute;
-  inset-block-start: -1.35rem;
-  inset-inline-end: 0;
+/* A heading carries its control on its own line, right after the text. The
+   wrapper is a flex row, so the heading's margins move to it: a flex container
+   does not collapse its child's margins, and the rhythm must not change. */
+[data-block-id]:has(> :is(h2, h3, h4, h5, h6)) {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-block: 1.5em 0.5em;
+}
+
+[data-block-id]:has(> h2) {
+  font-size: 1.5rem;
+}
+
+[data-block-id]:has(> h3) {
+  font-size: 1.25rem;
+}
+
+[data-block-id]:has(> h4) {
+  font-size: 1.125rem;
+}
+
+[data-block-id]:has(> h5) {
+  font-size: 1rem;
+}
+
+[data-block-id]:has(> h6) {
+  font-size: 0.875rem;
+}
+
+[data-block-id]:has(> :is(h2, h3, h4, h5, h6)) > :is(h2, h3, h4, h5, h6) {
+  margin-block: 0;
+  min-width: 0;
+}
+
+/* The heading's own control joins that row instead of floating over it. */
+[data-block-id]:has(> :is(h2, h3, h4, h5, h6)) > [data-mdv-copy-link] {
+  position: static;
+}
+
+/* The document's edge rules apply to the wrapper now. */
+.preview-body > [data-block-id]:has(> :is(h2, h3, h4, h5, h6)):first-child {
+  margin-block-start: 0;
+}
+
+.preview-body > [data-block-id]:has(> :is(h2, h3, h4, h5, h6)):last-child {
+  margin-block-end: 0;
+}
+
+/* A table is only as wide as its cells: shrink the block to it, so the control
+   lands inside the table's corner rather than the measure's. */
+[data-block-id]:has(> table) {
+  width: fit-content;
+  max-width: 100%;
+}
+
+/* A table has no padding to host the control, so the header row keeps its
+   top-right cell clear for it. */
+.preview-body table tr:first-child > :last-child {
+  padding-inline-end: 2.75rem;
 }
 
 /* A translucent page surface keeps the overlay readable over a fence's first line. */
-:is([data-mdv-actions] .btn, [data-mdv-copy-link], [data-mdv-copy-url]) {
+[data-mdv-actions] .btn {
   background: color-mix(in oklab, var(--color-base-100) 85%, transparent);
 }
 
+/* daisyUI sizes the button from its own scale; the glyph gets a fixed size so a
+   larger button does not only add padding. */
+:is([data-mdv-actions] .btn, [data-mdv-copy-link]) [data-mdv-icon] {
+  width: 1rem;
+  height: 1rem;
+}
+
 [data-block-id]:hover :is([data-mdv-actions], [data-mdv-copy-link]),
-[data-block-id]:focus-within :is([data-mdv-actions], [data-mdv-copy-link]),
-[data-mdv-link]:hover [data-mdv-copy-url],
-[data-mdv-link]:focus-within [data-mdv-copy-url] {
+[data-block-id]:focus-within :is([data-mdv-actions], [data-mdv-copy-link]) {
   opacity: 1;
   pointer-events: auto;
 }
@@ -314,17 +569,11 @@ a {
   display: inline;
 }
 
-/* No hover means no reveal gesture: every control stays visible, the link icon
-   becomes part of the line. */
+/* No hover means no reveal gesture: every control stays visible. */
 @media (hover: none) {
-  :is([data-mdv-actions], [data-mdv-copy-link], [data-mdv-copy-url]) {
+  :is([data-mdv-actions], [data-mdv-copy-link]) {
     opacity: 1;
     pointer-events: auto;
-  }
-
-  [data-mdv-copy-url] {
-    position: static;
-    margin-inline-start: 0.25rem;
   }
 }
 
@@ -340,8 +589,13 @@ a {
 [data-line-numbers="on"] .shiki .line::before {
   counter-increment: mdv-line;
   content: counter(mdv-line);
+  /* A fixed column with a gap keeps the number off the code; inline-block
+     keeps the box on the line it numbers. */
+  display: inline-block;
+  min-width: 1.75rem;
+  margin-inline-end: 0.75rem;
   color: var(--mdv-token-comment);
-  /* Inline content, so a wrapped line keeps its box. */
+  text-align: end;
 }
 
 /* The highlighter emits one extra empty line for the trailing newline. A

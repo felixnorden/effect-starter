@@ -7,6 +7,7 @@ import { bootView } from "./boot.ts";
 import { handleContentClick, installImageFallback, type ControlDeps } from "./controls.ts";
 import { readDisplay, toggleLineNumbers, withTheme } from "./display.ts";
 import { pageThemeOf, setPageTheme, toggleColorMode } from "./page-theme.ts";
+import { readSidebarState, toggleSidebarState, type SidebarState } from "./sidebar-state.ts";
 import { connectClient } from "./socket.ts";
 import { applyServerMessage, emptyPreviewState } from "./store.ts";
 import { syncThemeSheets } from "./theme-sheets.ts";
@@ -37,11 +38,39 @@ const Live = () => {
   const [display, setDisplay] = useState(() => booted.display);
   const [slots, setSlots] = useState(() => booted.slots);
   const [view, setView] = useState<View>(() => booted.view);
+  const [sidebar, setSidebar] = useState<SidebarState>(() =>
+    // The panel floats over the page, so the rail is the resting state.
+    readSidebarState({ storage: storage(), defaultState: "rail" }),
+  );
+  // Motion starts with the first toggle, not with the first paint.
+  const [animated, setAnimated] = useState(false);
+
+  const toggleSidebar = (): void => {
+    setAnimated(true);
+    const next = toggleSidebarState(sidebar, { storage: storage() });
+    setSidebar(next);
+  };
 
   // The head owns the two code-theme sheets; React must not re-render them.
   useEffect(() => {
     syncThemeSheets(document, display);
   }, [display]);
+
+  // Escape closes the panel, except while a native form control owns the key.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key !== "Escape" || sidebar !== "open" || event.defaultPrevented) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest("select, input, textarea") !== null) {
+        return;
+      }
+      setAnimated(true);
+      const next = toggleSidebarState(sidebar, { storage: storage() });
+      setSidebar(next);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [sidebar]);
 
   const container = useRef<HTMLElement>(null);
   const status = useRef<HTMLParagraphElement>(null);
@@ -90,6 +119,9 @@ const Live = () => {
     <App
       state={state}
       display={display}
+      sidebar={sidebar}
+      animated={animated}
+      onToggleSidebar={toggleSidebar}
       containerRef={container}
       statusRef={status}
       mode={view.colorMode}

@@ -2,11 +2,13 @@ import type { RefObject } from "react";
 
 import type { Display, ThemeSlot } from "./display.ts";
 import type { PageThemeScheme } from "./page-theme.ts";
+import type { SidebarState } from "./sidebar-state.ts";
 import type { PreviewState } from "./store.ts";
 import type { PresetAxis, Presets } from "./view-presets.ts";
 
-import { Bar } from "./bar.tsx";
 import { BlockList } from "./blocks.tsx";
+import { Header } from "./header.tsx";
+import { Sidebar } from "./sidebar.tsx";
 
 export type AppProps = {
   readonly state: PreviewState;
@@ -14,6 +16,10 @@ export type AppProps = {
   readonly mode: PageThemeScheme;
   readonly pageTheme: string;
   readonly presets: Presets;
+  readonly sidebar: SidebarState;
+  /** True once the user has toggled the panel; gates the morph animation. */
+  readonly animated?: boolean;
+  readonly onToggleSidebar: () => void;
   readonly onToggleMode: () => void;
   readonly onPageThemeChange: (name: string) => void;
   readonly onThemeChange: (slot: ThemeSlot, id: string) => void;
@@ -30,6 +36,9 @@ export const App = ({
   mode,
   pageTheme,
   presets,
+  sidebar,
+  animated = false,
+  onToggleSidebar,
   onToggleMode,
   onPageThemeChange,
   onThemeChange,
@@ -42,15 +51,28 @@ export const App = ({
   const heading = state.title ?? state.fileName;
 
   return (
-    <div className="preview-shell">
-      <Bar
+    <div className="preview-shell" data-sidebar={sidebar} data-animated={animated}>
+      <Header
         heading={heading}
         fileName={state.title === null || state.fileName === null ? null : state.fileName}
+        statusRef={statusRef}
+      />
+
+      <button
+        type="button"
+        className="preview-backdrop"
+        aria-hidden="true"
+        tabIndex={-1}
+        onClick={onToggleSidebar}
+      />
+
+      <Sidebar
+        state={sidebar}
         mode={mode}
         pageTheme={pageTheme}
         display={display}
         presets={presets}
-        statusRef={statusRef}
+        onToggleSidebar={onToggleSidebar}
         onToggleMode={onToggleMode}
         onPageThemeChange={onPageThemeChange}
         onThemeChange={onThemeChange}
