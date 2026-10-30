@@ -80,14 +80,14 @@ test("a configured theme applies and a manual toggle survives a reload", async (
 
   try {
     await page.goto(server.url);
-    await page.waitForSelector(".preview-theme-toggle");
+    await page.waitForSelector(".preview-panel-toggle");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 
     await page.getByRole("button", { name: "Dark" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
     await page.reload();
-    await page.waitForSelector(".preview-theme-toggle");
+    await page.waitForSelector(".preview-panel-toggle");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   } finally {
     await server.stop();
