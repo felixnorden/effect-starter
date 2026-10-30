@@ -1,13 +1,7 @@
 import type { BlockId, WireBlock } from "@mdv/core/protocol";
 import { memo, type ReactNode } from "react";
 
-import {
-  HastNode,
-  mapReference,
-  readTree,
-  type HastElement,
-  type HastNode as HastNodeType,
-} from "./hast.tsx";
+import { HastNode, readTree, type HastElement, type HastNode as HastNodeType } from "./hast.tsx";
 
 const HEADING_TAGS = new Set(["h2", "h3", "h4", "h5", "h6"]);
 
@@ -53,7 +47,7 @@ const IconControl = ({
   readonly label: string;
   readonly data: Readonly<Record<string, string>>;
 }) => (
-  <button type="button" className="btn btn-xs btn-ghost" aria-label={label} {...data}>
+  <button type="button" className="btn btn-sm btn-square btn-ghost" aria-label={label} {...data}>
     <CopyGlyph />
     <CheckGlyph />
   </button>
@@ -72,31 +66,9 @@ const withHeadingControl = (node: HastElement, element: ReactNode): ReactNode =>
   );
 };
 
-/** The inline wrapper anchors the overlay; the mapped href is what the link opens. */
-const withLinkControl = (node: HastElement, element: ReactNode): ReactNode => {
-  const raw = node.properties?.href;
-  if (node.tagName !== "a" || typeof raw !== "string") return element;
-
-  const href = mapReference("href", raw);
-  if (href === null) return element;
-
-  const text = textOf(node);
-  return (
-    <span data-mdv-link="true">
-      {element}
-      <IconControl
-        label={`Copy address of ${text === "" ? href : text}`}
-        data={{ "data-mdv-copy-url": href }}
-      />
-    </span>
-  );
-};
-
-const decorate = (node: HastElement, element: ReactNode): ReactNode => {
-  if (HEADING_TAGS.has(node.tagName)) return withHeadingControl(node, element);
-  if (node.tagName === "a") return withLinkControl(node, element);
-  return element;
-};
+/** Only headings carry a control; links are plain links. */
+const decorate = (node: HastElement, element: ReactNode): ReactNode =>
+  HEADING_TAGS.has(node.tagName) ? withHeadingControl(node, element) : element;
 
 /** One cluster per block that has a payload; the overlay owns no document space. */
 const ActionCluster = ({ kind }: { readonly kind: "code" | "table" }) => {
@@ -106,11 +78,12 @@ const ActionCluster = ({ kind }: { readonly kind: "code" | "table" }) => {
     <div data-mdv-actions="true">
       <button
         type="button"
-        className="btn btn-xs btn-ghost"
+        className="btn btn-sm btn-square btn-ghost"
         aria-label={kind === "code" ? "Copy code" : "Copy table"}
         {...{ [attribute]: "true" }}
       >
-        <span data-mdv-label="true">Copy</span>
+        <CopyGlyph />
+        <CheckGlyph />
       </button>
     </div>
   );

@@ -214,6 +214,22 @@ describe("BlockList", () => {
     expect(markup).not.toContain('data-mdv-copy-link="undefined"');
   });
 
+  it("gives every copy control the same square, slightly larger button", () => {
+    const markup = markupOf([
+      headingOf("heading", "Heading"),
+      codeOf(),
+      tableOf(),
+      linkParagraphOf(),
+    ]);
+    const buttons = markup.match(/<button[^>]*data-mdv-copy-(?:code|table|link|url)[^>]*>/gu) ?? [];
+
+    // One heading link, one code, one table.
+    expect(buttons).toHaveLength(3);
+    for (const button of buttons) {
+      expect(button).toContain('class="btn btn-sm btn-square btn-ghost"');
+    }
+  });
+
   it("restyles the heading control as an icon without moving it", () => {
     const markup = markupOf([headingOf("heading", "Heading")]);
     const control = controlOf(markup, "data-mdv-copy-link");
@@ -232,8 +248,10 @@ describe("BlockList", () => {
     expect(markup.match(/data-mdv-actions/gu)).toHaveLength(1);
     expect(markup.indexOf("data-mdv-actions")).toBeGreaterThan(markup.indexOf("</pre>"));
     expect(control).toContain('aria-label="Copy code"');
-    expect(control).toContain("data-mdv-label");
-    expect(control).toContain(">Copy</span>");
+    expect(control).toContain('data-mdv-icon="copy"');
+    expect(control).toContain('data-mdv-icon="check"');
+    expect(control).not.toContain("data-mdv-label");
+    expect(control).not.toContain(">Copy<");
   });
 
   it("gives a table block one action cluster and leaves other kinds alone", () => {
@@ -247,17 +265,13 @@ describe("BlockList", () => {
     expect(paragraph).not.toContain("data-mdv-actions");
   });
 
-  it("gives each inline link an icon control named for its destination", () => {
+  it("leaves inline links plain: no control, no wrapper", () => {
     const markup = markupOf([linkParagraphOf()]);
-    const controls = markup.match(/<button[^>]*data-mdv-copy-url[^>]*>[\s\S]*?<\/button>/gu) ?? [];
 
-    expect(controls).toHaveLength(2);
-    expect(markup.match(/data-mdv-link/gu)).toHaveLength(2);
-    expect(controls[0]).toContain('aria-label="Copy address of notes"');
-    expect(controls[1]).toContain('aria-label="Copy address of /local/notes.md"');
-    expect(controls[0]).toContain('data-mdv-copy-url="/local/notes.md"');
-    expect(controls[0]).toContain('aria-hidden="true"');
-    expect(controls[0]).not.toContain(">Copy<");
+    expect(markup).not.toContain("data-mdv-copy-url");
+    expect(markup).not.toContain("data-mdv-link");
+    expect(markup.match(/<a /gu)).toHaveLength(2);
+    expect(markup.match(/<button/gu)).toBeNull();
   });
 
   it("renders the control as a sibling of the block content", () => {

@@ -187,20 +187,6 @@ describe("handleContentClick", () => {
     expect(writes).toEqual(["a\tb\nc\td"]);
   });
 
-  it("copies an inline link's absolute address", async () => {
-    const { button } = iconControl("[data-mdv-copy-url]", "data-mdv-copy-url", "/local/notes.md");
-    const { clipboard, writes } = clipboardSpy();
-    const { timers } = fakeTimers();
-
-    handleContentClick(
-      { target: targetOf(button) },
-      depsOf(clipboard, timers, { textContent: null }, { href: "http://localhost:4321/preview" }),
-    );
-    await Promise.resolve();
-
-    expect(writes).toEqual(["http://localhost:4321/local/notes.md"]);
-  });
-
   it("copies the heading's absolute URL, built from the existing id", async () => {
     const { clipboard, writes } = clipboardSpy();
     const { timers } = fakeTimers();

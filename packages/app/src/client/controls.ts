@@ -45,7 +45,6 @@ export type ControlDeps = {
 const COPY_CODE = "[data-mdv-copy-code]";
 const COPY_TABLE = "[data-mdv-copy-table]";
 const COPY_LINK = "[data-mdv-copy-link]";
-const COPY_URL = "[data-mdv-copy-url]";
 const LABEL = "[data-mdv-label]";
 const CONTROL_LABEL = "Copy";
 const COPIED_LABEL = "Copied";
@@ -55,7 +54,7 @@ const FLASH_MS = 1200;
 
 const STATE_ATTRIBUTE = "data-mdv-state";
 
-type Kind = "code" | "table" | "link" | "url";
+type Kind = "code" | "table" | "link";
 type FlashState = "copied" | "failed" | "empty";
 type Flash = { readonly generation: number; readonly handle?: unknown };
 
@@ -68,11 +67,10 @@ const closestControl = (target: unknown, selector: string): Element | null => {
   return typeof candidate.closest === "function" ? candidate.closest(selector) : null;
 };
 
-/** The four kinds, in the order a click is routed. */
+/** The three kinds, in the order a click is routed. */
 const controlAt = (target: unknown): { readonly control: Element; readonly kind: Kind } | null => {
   for (const [kind, selector] of [
     ["link", COPY_LINK],
-    ["url", COPY_URL],
     ["code", COPY_CODE],
     ["table", COPY_TABLE],
   ] as const) {
@@ -105,10 +103,6 @@ const payloadOf = (control: Element, kind: Kind, deps: ControlDeps): string | nu
   if (kind === "link") {
     const id = control.getAttribute("data-mdv-copy-link");
     return id === null ? null : headingUrl(deps.location.href, id);
-  }
-  if (kind === "url") {
-    const href = control.getAttribute("data-mdv-copy-url");
-    return href === null ? null : new URL(href, deps.location.href).href;
   }
 
   const block = control.closest("[data-block-id]");
