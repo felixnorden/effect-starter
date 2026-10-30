@@ -1,7 +1,7 @@
 import type { SessionMessage } from "@mdv/core/protocol";
 
 import { sheetUrl, type Display } from "./display.ts";
-import type { Theme } from "./theme.ts";
+import type { PageThemeScheme } from "./page-theme.ts";
 
 /** The storage key that records the configured mode a manual choice was made under. */
 export const THEME_MODE_KEY = "preview-theme-mode";
@@ -9,16 +9,16 @@ export const THEME_MODE_KEY = "preview-theme-mode";
 export type ThemeChoiceInput = {
   /** The member's configured mode, or `null` before the first member. */
   readonly configured: SessionMessage["themeMode"] | null;
-  readonly stored: Theme | null;
+  readonly stored: PageThemeScheme | null;
   readonly storedMode: string | null;
-  readonly system: Theme;
+  readonly system: PageThemeScheme;
 };
 
 /**
  * Configuration first, then a stored manual toggle chosen under that same mode,
  * then the system preference. A stored toggle under another mode is discarded.
  */
-export const resolveSessionTheme = (input: ThemeChoiceInput): Theme => {
+export const resolveSessionTheme = (input: ThemeChoiceInput): PageThemeScheme => {
   const configured = input.configured ?? "system";
   if (input.stored !== null && input.storedMode === configured) return input.stored;
   return configured === "system" ? input.system : configured;

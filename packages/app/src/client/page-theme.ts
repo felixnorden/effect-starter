@@ -62,11 +62,18 @@ export const readPageTheme = (deps: { readonly storage: Storage }): PageThemeSlo
 export const readColorMode = (deps: {
   readonly storage: Storage;
   readonly matchMedia: MatchMedia;
-}): PageThemeScheme => {
+}): PageThemeScheme => readStoredColorMode({ storage: deps.storage }) ?? systemColorMode(deps);
+
+/** The stored manual mode, or null before the first toggle. */
+export const readStoredColorMode = (deps: {
+  readonly storage: Storage;
+}): PageThemeScheme | null => {
   const stored = deps.storage.getItem(COLOR_MODE_KEY);
-  if (isColorMode(stored)) return stored;
-  return deps.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return isColorMode(stored) ? stored : null;
 };
+
+export const systemColorMode = (deps: { readonly matchMedia: MatchMedia }): PageThemeScheme =>
+  deps.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 
 /** Persist one slot, and only when the name belongs to that scheme. */
 export const setPageTheme = (

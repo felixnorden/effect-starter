@@ -162,9 +162,15 @@ a {
 }
 
 .preview-shell {
-  max-width: var(--preview-measure);
+  /* The session's absolute width wins; the preset measure is the fallback. */
+  max-width: var(--preview-width, var(--preview-measure));
   margin: 0 auto;
   padding: 2rem 1.5rem 0;
+}
+
+.preview-body {
+  /* The session's font size wins; the scale preset multiplies the root size. */
+  font-size: var(--preview-font-size, 1rem);
 }
 
 .preview-header {

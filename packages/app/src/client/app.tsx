@@ -1,7 +1,8 @@
-import type { RefObject } from "react";
+import type { CSSProperties, RefObject } from "react";
 
 import type { Display, ThemeSlot } from "./display.ts";
 import type { PageThemeScheme } from "./page-theme.ts";
+import { fileNameLineOf, headingOf, layoutStyleOf } from "./session.ts";
 import type { SidebarState } from "./sidebar-state.ts";
 import type { PreviewState } from "./store.ts";
 import type { PresetAxis, Presets } from "./view-presets.ts";
@@ -28,6 +29,8 @@ export type AppProps = {
   /** The element the scroll anchor measures; the page owns the shell. */
   readonly containerRef?: RefObject<HTMLElement | null>;
   readonly statusRef?: RefObject<HTMLParagraphElement | null>;
+  /** Set when the socket closes; the page then names the restart command. */
+  readonly ended?: string | null;
 };
 
 export const App = ({
@@ -46,17 +49,20 @@ export const App = ({
   onPresetChange,
   containerRef,
   statusRef,
+  ended,
 }: AppProps) => {
-  // The page owns the single h1: the title, else the file name.
-  const heading = state.title ?? state.fileName;
+  // The session names the page; the document's own title is the fallback.
+  const heading = headingOf(state.session, state.title, state.fileName);
+  const fileLine = fileNameLineOf(state.session, state.title, state.fileName);
 
   return (
-    <div className="preview-shell" data-sidebar={sidebar} data-animated={animated}>
-      <Header
-        heading={heading}
-        fileName={state.title === null || state.fileName === null ? null : state.fileName}
-        statusRef={statusRef}
-      />
+    <div
+      className="preview-shell"
+      style={layoutStyleOf(state.session) as CSSProperties | undefined}
+      data-sidebar={sidebar}
+      data-animated={animated}
+    >
+      <Header heading={heading} fileName={fileLine} statusRef={statusRef} />
 
       <button
         type="button"
@@ -81,6 +87,11 @@ export const App = ({
       />
 
       <main className="preview-main" ref={containerRef}>
+        {ended === undefined || ended === null ? null : (
+          <div role="alert" className="preview-banner">
+            The preview ended: {ended}. Restart with :MarkdownPreview.
+          </div>
+        )}
         {state.banner === null ? null : (
           <div role="alert" className="preview-banner">
             {state.banner.stage}: {state.banner.message}

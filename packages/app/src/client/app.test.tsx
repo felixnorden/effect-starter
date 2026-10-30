@@ -457,7 +457,7 @@ describe("App", () => {
     expect(markup).toContain("--preview-font-size:18px");
   });
 
-  it("links the configured sheets after the theme sheets, code last", () => {
+  it("leaves the session's configured sheets to the head too", () => {
     const markup = renderToStaticMarkup(
       <TestApp
         state={sessionState({
@@ -467,10 +467,8 @@ describe("App", () => {
       />,
     );
 
-    const order = ["light", "dark", "markdown", "code"].map((slot) =>
-      markup.indexOf(`data-slot="${slot}"`),
-    );
-    expect(order.every((index) => index >= 0)).toBe(true);
-    expect(order).toEqual([...order].sort((left, right) => left - right));
+    // `theme-sheets.ts` owns the pinned cascade; React would keep every href.
+    expect(markup).not.toContain("<link");
+    expect(markup).not.toContain("data-slot");
   });
 });
