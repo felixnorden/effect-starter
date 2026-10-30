@@ -1,4 +1,5 @@
 export * from "./protocol.ts";
+export * from "./config/index.ts";
 export * from "./model.ts";
 export * from "./render/assets.ts";
 export * from "./render/document.ts";
@@ -6,5 +7,7 @@ export * from "./render/highlight.ts";
 export * from "./render/options.ts";
 export * from "./render/renderer.ts";
 export * from "./render/to-html.ts";
+export * from "./render/preview-title.ts";
 export * from "./session/block-diff.ts";
+export * from "./session/cursor.ts";
 export * from "./session/document-session.ts";

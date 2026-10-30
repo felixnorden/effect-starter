@@ -108,6 +108,9 @@ jobs:
       - name: Editor lifecycle
         run: bun run editor:lifecycle
 
+      - name: Editor health
+        run: bun run editor:health --editor vim --no-server
+
   editors-nvim-floor:
     runs-on: ubuntu-latest
     steps:
@@ -183,15 +186,25 @@ jobs:
       - name: Editor conformance
         run: bun run editor:conformance
 
+      - name: Editor sessions
+        run: bun run editor:sessions
+
       - name: Editor lifecycle
         run: bun run editor:lifecycle
 
       - name: Editor refresh
         run: bun run editor:refresh
 
+      - name: Editor health
+        run: bun run editor:health
+
+      - name: Editor protocol
+        run: bun run editor:protocol
+
       - name: Frames and codecs regenerate byte-identically
         run: |
           bun run frames:generate
+          bun run config:generate
           git diff --exit-code fixtures/generated/editor-frames \
             packages/editor/nvim/lua/markdown_viewer/generated \
             packages/editor/vim/autoload/markdown_viewer/generated

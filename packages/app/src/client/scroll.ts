@@ -1,5 +1,14 @@
-import type { BlockId } from "@mdv/core/protocol";
-import { useCallback, useLayoutEffect, useRef, type RefObject } from "react";
+import type { BlockId, CursorMessage, SessionMessage } from "@mdv/core/protocol";
+import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from "react";
+
+import {
+  handScroll,
+  idleSync,
+  isRestore,
+  noteCursor,
+  placement,
+  shouldPlace,
+} from "./sync-scroll.ts";
 
 export type ScrollAnchor = { readonly blockId: BlockId; readonly offset: number };
 
@@ -81,4 +90,57 @@ export const useScrollAnchor = (
   }, [lastSeq, container]);
 
   return beginPatch;
+};
+
+/**
+ * One cursor-driven effect beside the patch anchor. A hand scroll pauses it
+ * until the next cursor; the first cursor after a swap restores in one step.
+ */
+export const useCursorPlacement = (
+  container: RefObject<HTMLElement | null>,
+  cursor: CursorMessage | null,
+  session: SessionMessage | null,
+  appliedSeq: number,
+): void => {
+  const sync = useRef(idleSync);
+  const quietUntil = useRef(0);
+
+  useEffect(() => {
+    const onScroll = (): void => {
+      if (Date.now() < quietUntil.current) return;
+      sync.current = handScroll(sync.current);
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useLayoutEffect(() => {
+    const element = container.current;
+    if (element === null || cursor === null || session === null) return;
+    if (!shouldPlace(sync.current)) return;
+
+    const target = element.querySelector<HTMLElement>(`[data-block-id="${cursor.blockId}"]`);
+    if (target === null) return;
+
+    const rect = target.getBoundingClientRect();
+    const result = placement({
+      mode: session.scrollMode,
+      blockTop: rect.top + window.scrollY,
+      blockHeight: rect.height,
+      viewportHeight: window.innerHeight,
+      fraction: cursor.fraction,
+      smooth: session.smoothScroll,
+      reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+      seq: cursor.seq,
+      appliedSeq,
+      restore: isRestore(sync.current, cursor.seq),
+    });
+    sync.current = noteCursor(sync.current, cursor.seq);
+    if (result === null) return;
+
+    // Our own scroll events must not look like a hand scroll.
+    quietUntil.current = Date.now() + 600;
+    window.scrollTo({ top: result.top, behavior: result.behavior });
+  }, [container, cursor, session, appliedSeq]);
 };

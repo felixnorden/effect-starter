@@ -44,6 +44,9 @@ local function matches_type(value, kind, values)
     end
     return false
   end
+  if kind == "json" then
+    return value ~= nil
+  end
   return false
 end
 

@@ -12,6 +12,7 @@
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
+    "resolveJsonModule": true,
     // The Effect language service. `effect-tsgo patch` in the root `postinstall`
     // script wires this into `tsc`, so `bun run check:types` reports Effect
     // diagnostics and the editor gets the same quick fixes.

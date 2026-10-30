@@ -176,6 +176,16 @@ describe("App", () => {
     expect(on).toContain('data-line-numbers="on"');
   });
 
+  it("the ended state names the cause and the restart command", () => {
+    const markup = renderToStaticMarkup(
+      <TestApp state={emptyPreviewState} ended="the server closed the connection" />,
+    );
+
+    expect(markup).toContain("the server closed the connection");
+    expect(markup).toContain(":MarkdownPreview");
+    expect(markup).toContain('role="alert"');
+  });
+
   it("keeps the last document visible under the banner", () => {
     const markup = renderToStaticMarkup(
       <TestApp
@@ -188,5 +198,60 @@ describe("App", () => {
 
     expect(markup).toContain("Document text");
     expect(markup).toContain("watch: unreadable");
+  });
+
+  const sessionState = (overrides: Partial<PreviewState["session"]> = {}): PreviewState =>
+    stateOf({
+      session: {
+        _tag: "session",
+        fileName: "notes.md",
+        title: "Notes",
+        showFileName: true,
+        width: "900px",
+        fontSize: "16px",
+        markdownCss: null,
+        codeCss: null,
+        scrollMode: "middle",
+        smoothScroll: true,
+        themeMode: "system",
+        ...overrides,
+      },
+    });
+
+  it("hides the file-name line and keeps the heading", () => {
+    const shown = renderToStaticMarkup(<TestApp state={sessionState()} />);
+    const hidden = renderToStaticMarkup(<TestApp state={sessionState({ showFileName: false })} />);
+
+    expect(shown).toContain('class="preview-file-name"');
+    expect(shown).toContain("notes.md");
+    expect(hidden).not.toContain('class="preview-file-name"');
+    expect(hidden).toContain('class="preview-title"');
+    expect(hidden).toContain("Notes");
+  });
+
+  it("applies width and font size as CSS custom properties", () => {
+    const markup = renderToStaticMarkup(
+      <TestApp state={sessionState({ width: "1200px", fontSize: "18px" })} />,
+    );
+
+    expect(markup).toContain("--preview-width:1200px");
+    expect(markup).toContain("--preview-font-size:18px");
+  });
+
+  it("links the configured sheets after the theme sheets, code last", () => {
+    const markup = renderToStaticMarkup(
+      <TestApp
+        state={sessionState({
+          markdownCss: "/stylesheet/markdown/aaaaaaaaaaaaaaaa",
+          codeCss: "/stylesheet/code/bbbbbbbbbbbbbbbb",
+        })}
+      />,
+    );
+
+    const order = ["light", "dark", "markdown", "code"].map((slot) =>
+      markup.indexOf(`data-slot="${slot}"`),
+    );
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect(order).toEqual([...order].sort((left, right) => left - right));
   });
 });

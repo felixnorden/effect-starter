@@ -3,9 +3,11 @@
 // @effect-diagnostics runEffectInsideEffect:off
 import {
   decodeClientMessage,
-  encodeServerMessage,
   PROTOCOL_VERSION,
+  encodeServerMessage,
+  type CursorMessage,
   type ServerMessage,
+  type SessionMessage,
 } from "@mdv/core/protocol";
 import { Effect, Exit, Fiber, Queue, Result, Scope, Stream } from "effect";
 import * as FileSystem from "effect/FileSystem";
@@ -16,8 +18,19 @@ import * as HttpPlatform from "effect/http/HttpPlatform";
 import * as Socket from "effect/socket/Socket";
 import path from "node:path";
 
+import { stylesheetAddress } from "@mdv/core/config";
+
 import { localAssetResponse, resolveAsset } from "./assets.ts";
 import { createClientHub, type Client, type ClientHub } from "./client-hub.ts";
+
+/** One configured stylesheet: the resolved file the slot may serve. */
+export type StylesheetFile = {
+  readonly path: string;
+};
+
+export type StylesheetMap = Readonly<Record<"markdown" | "code", StylesheetFile | null>>;
+
+const STYLESHEET_PATH = /^\/stylesheet\/(markdown|code)\/([0-9a-f]{16})$/u;
 
 export type ClientFrameDeps = {
   readonly hub: ClientHub;
@@ -25,6 +38,9 @@ export type ClientFrameDeps = {
   readonly title: string | null;
   readonly fileName: string;
   readonly currentSnapshot: Effect.Effect<ServerMessage | null>;
+  readonly currentSession: Effect.Effect<SessionMessage | null>;
+  /** The last resolved cursor, replayed after a snapshot so a reload restores it. */
+  readonly currentCursor: Effect.Effect<CursorMessage | null>;
 };
 
 /**
@@ -49,6 +65,8 @@ export const handleClientFrame = (deps: ClientFrameDeps, frame: string): Effect.
     const message = decoded.success;
 
     if (message._tag === "hello") {
+      // A new page on this connection has no snapshot or cursor yet.
+      deps.client.lastSnapshotSeq = undefined;
       if (message.protocolVersion !== PROTOCOL_VERSION) {
         deps.client.send(
           encodeServerMessage({
@@ -69,13 +87,27 @@ export const handleClientFrame = (deps: ClientFrameDeps, frame: string): Effect.
           fileName: deps.fileName,
         }),
       );
+      const session = yield* deps.currentSession;
+      if (session !== null) deps.client.send(encodeServerMessage(session));
       return;
     }
 
     if (message._tag === "ack") return;
 
     const snapshot = yield* deps.currentSnapshot;
-    if (snapshot !== null) deps.client.send(encodeServerMessage(snapshot));
+    if (snapshot === null) return;
+    deps.client.send(encodeServerMessage(snapshot));
+
+    // A page is stranded only before its first snapshot on this connection, or
+    // when the last cursor is older than the snapshot's document. The replay
+    // carries the snapshot's seq so the page's stale-seq guard keeps it.
+    if (snapshot._tag !== "snapshot") return;
+    const firstSnapshot = deps.client.lastSnapshotSeq === undefined;
+    const cursor = yield* deps.currentCursor;
+    if (cursor !== null && (firstSnapshot || cursor.seq < snapshot.seq)) {
+      deps.client.send(encodeServerMessage({ ...cursor, seq: snapshot.seq }));
+    }
+    deps.client.lastSnapshotSeq = snapshot.seq;
   });
 
 /** Containment: no `..` segment, no backslash escape, no path outside the root. */
@@ -107,13 +139,19 @@ const rawPathOf = (url: string): string => url.split("?")[0] ?? "/";
 
 export type ServerOptions = {
   readonly clientDir: string;
-  /** The source file's directory: the sole allowed root for `/local/*`. `null` means the route answers 404. */
+  /** The initial source directory; `null` means the route answers 404. */
   readonly localRoot: string | null;
+  /** The displayed member's directory; overrides `localRoot` on every request. */
+  readonly currentLocalRoot?: Effect.Effect<string | null>;
   /** The one configured image root; `null` means the route exists but answers 404. */
   readonly imageRoot: string | null;
   readonly fileName: string;
   readonly title: string | null;
   readonly currentSnapshot: Effect.Effect<ServerMessage | null>;
+  readonly currentSession: Effect.Effect<SessionMessage | null>;
+  readonly currentCursor: Effect.Effect<CursorMessage | null>;
+  /** The resolved configured sheets; only a hash-matching address is served. */
+  readonly stylesheets: Effect.Effect<StylesheetMap>;
   readonly updates: Stream.Stream<ServerMessage>;
 };
 
@@ -162,6 +200,28 @@ const serveStatic = (
     const exists = yield* fs.exists(filePath).pipe(Effect.orElseSucceed(() => false));
     if (!exists) return notFound();
     return yield* HttpServerResponse.file(filePath).pipe(Effect.orElseSucceed(() => notFound()));
+  });
+
+const serveStylesheet = (
+  stylesheets: Effect.Effect<StylesheetMap>,
+  slot: "markdown" | "code",
+  hash: string,
+): Effect.Effect<HttpServerResponse.HttpServerResponse, never, FileSystem.FileSystem> =>
+  Effect.gen(function* () {
+    const file = (yield* stylesheets)[slot];
+    if (file === null) return notFound();
+
+    const fs = yield* FileSystem.FileSystem;
+    const bytes = yield* fs.readFile(file.path).pipe(Effect.orElseSucceed(() => null));
+    if (bytes === null) return notFound();
+    if (stylesheetAddress(slot, bytes).slice(`/stylesheet/${slot}/`.length) !== hash) {
+      return notFound();
+    }
+
+    return HttpServerResponse.text(new TextDecoder().decode(bytes), {
+      contentType: "text/css; charset=utf-8",
+      headers: { "cache-control": "no-store" },
+    });
   });
 
 /**
@@ -247,6 +307,8 @@ export const startServer = (
       fileName: options.fileName,
       title: options.title,
       currentSnapshot: options.currentSnapshot,
+      currentSession: options.currentSession,
+      currentCursor: options.currentCursor,
     };
 
     const app = Effect.gen(function* () {
@@ -254,9 +316,15 @@ export const startServer = (
       const rawPath = rawPathOf(request.url);
 
       if (rawPath === "/ws") return yield* serveWebSocket(request, hub, frameDeps);
+      const stylesheet = STYLESHEET_PATH.exec(rawPath);
+      if (stylesheet !== null) {
+        const slot = stylesheet[1] === "code" ? "code" : "markdown";
+        return yield* serveStylesheet(options.stylesheets, slot, stylesheet[2] ?? "");
+      }
       if (rawPath.startsWith("/local/")) {
-        if (options.localRoot === null) return notFound();
-        return yield* serveFromRoot(options.localRoot, rawPath, "/local/");
+        const localRoot = yield* options.currentLocalRoot ?? Effect.succeed(options.localRoot);
+        if (localRoot === null) return notFound();
+        return yield* serveFromRoot(localRoot, rawPath, "/local/");
       }
       if (rawPath.startsWith("/image-root/")) {
         if (options.imageRoot === null) return notFound();

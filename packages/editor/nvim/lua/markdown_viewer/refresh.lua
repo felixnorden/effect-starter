@@ -11,6 +11,7 @@ local COALESCED = {
 
 --- @param deps { read: fun(bufnr: integer|nil): {bufnr:integer, path:string, text:string}|nil,
 ---               send: fun(path:string, text:string): boolean,
+---               send_cursor: fun(): boolean,
 ---               now: fun(): integer,
 ---               timer: { schedule: fun(ms:integer, fn:fun()): any, cancel: fun(handle:any) } }
 function M.new(deps)
@@ -29,7 +30,7 @@ function M.new(deps)
         return
       end
       if window.wake then
-        attempt(bound)
+        attempt(bound, false, window.cursor)
       end
     end)
     -- A nil or non-positive handle means the window cannot open (M-11).
@@ -39,20 +40,21 @@ function M.new(deps)
     if type(handle) == "number" and handle <= 0 then
       return
     end
-    pending = { handle = handle, wake = false }
+    pending = { handle = handle, wake = false, cursor = false }
   end
 
-  local function coalesce(subject)
+  local function coalesce(subject, want_cursor)
     if pending ~= nil then
       pending.wake = true
+      pending.cursor = pending.cursor or want_cursor
       return
     end
-    if attempt(subject) then
+    if attempt(subject, false, want_cursor) then
       open_window()
     end
   end
 
-  attempt = function(subject, skip_compare)
+  attempt = function(subject, skip_compare, want_cursor)
     local read = deps.read(subject)
     if read == nil then
       return false
@@ -64,10 +66,16 @@ function M.new(deps)
       return false
     end
     if not skip_compare and read.text == sent then
+      if want_cursor and deps.send_cursor ~= nil then
+        deps.send_cursor()
+      end
       return false
     end
     if deps.send(read.path, read.text) then
       sent = read.text
+      if want_cursor and deps.send_cursor ~= nil then
+        deps.send_cursor()
+      end
       return true
     end
     return false
@@ -79,12 +87,15 @@ function M.new(deps)
     if stopped then
       return
     end
+    if deps.before_send ~= nil then
+      deps.before_send()
+    end
     if COALESCED[kind] then
-      coalesce(subject)
+      coalesce(subject, true)
       return
     end
     if kind == "BufWritePost" or kind == "InsertLeave" then
-      attempt(subject)
+      attempt(subject, false, false)
     end
   end
 
@@ -92,12 +103,24 @@ function M.new(deps)
     if stopped then
       return
     end
+    if deps.before_send ~= nil then
+      deps.before_send()
+    end
     if pending ~= nil then
       deps.timer.cancel(pending.handle)
       pending = nil
     end
     if bound ~= nil then
-      attempt(bound, true)
+      attempt(bound, true, false)
+    end
+  end
+
+  function handle.rebind()
+    if stopped then
+      return
+    end
+    if deps.send_cursor ~= nil then
+      deps.send_cursor()
     end
   end
 
@@ -109,7 +132,7 @@ function M.new(deps)
     end
     bound = nil
     sent = nil
-    vim.api.nvim_create_augroup(AUGROUP, { clear = true })
+    vim.api.nvim_create_augroup(deps.group or AUGROUP, { clear = true })
   end
 
   function handle.bound()
@@ -123,7 +146,7 @@ function M.new(deps)
     sent = initial.text
   end
 
-  local group = vim.api.nvim_create_augroup(AUGROUP, { clear = true })
+  local group = vim.api.nvim_create_augroup(deps.group or AUGROUP, { clear = true })
   vim.api.nvim_create_autocmd({
     "CursorHold",
     "CursorHoldI",

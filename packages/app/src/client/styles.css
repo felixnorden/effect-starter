@@ -47,13 +47,17 @@ a {
 }
 
 .preview-shell {
-  max-width: 56rem;
+  max-width: var(--preview-width, 56rem);
   margin: 0 auto;
   padding: 2rem 1.5rem 0;
 }
 
 .preview-main {
   padding-bottom: 4rem;
+}
+
+.preview-body {
+  font-size: var(--preview-font-size, 1rem);
 }
 
 .preview-header {

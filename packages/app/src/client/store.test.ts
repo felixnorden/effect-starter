@@ -1,4 +1,11 @@
-import type { BlockId, PatchMessage, SnapshotMessage, WireBlock } from "@mdv/core/protocol";
+import type {
+  BlockId,
+  CursorMessage,
+  PatchMessage,
+  SessionMessage,
+  SnapshotMessage,
+  WireBlock,
+} from "@mdv/core/protocol";
 import { describe, expect, it } from "vitest";
 
 import { applyServerMessage, emptyPreviewState, type PreviewState } from "./store.ts";
@@ -41,6 +48,29 @@ const readyOf = (fileName: string) => ({
   protocolVersion: 1,
   title: null,
   fileName,
+});
+
+const sessionOf = (overrides: Partial<SessionMessage>): SessionMessage => ({
+  _tag: "session",
+  fileName: "a.md",
+  title: "a.md",
+  showFileName: true,
+  width: "900px",
+  fontSize: "16px",
+  markdownCss: null,
+  codeCss: null,
+  scrollMode: "middle",
+  smoothScroll: true,
+  themeMode: "system",
+  ...overrides,
+});
+
+const cursorOf = (options: { readonly seq: number }): CursorMessage => ({
+  _tag: "cursor",
+  blockId: "a" as BlockId,
+  line: 1,
+  fraction: 0.5,
+  seq: options.seq,
 });
 
 const errorOf = (stage: string, message: string) => ({
@@ -191,5 +221,58 @@ describe("applyServerMessage", () => {
     const next = applyServerMessage(state, patchOf({ seq: 2, upserts: [blockOf("a", "changed")] }));
 
     expect(next.fileName).toBe("kitchen-sink.md");
+  });
+
+  it("keeps the newest session member's values, field by field", () => {
+    const first = sessionOf({ width: "800px", fontSize: "15px" });
+    const second = sessionOf({ width: "1200px", fontSize: "18px" });
+
+    const afterFirst = applyServerMessage(emptyPreviewState, first);
+    const afterSecond = applyServerMessage(afterFirst, second);
+
+    expect(afterSecond.session).toMatchObject({ width: "1200px", fontSize: "18px" });
+    expect(afterSecond.session?.title).toBe("a.md");
+  });
+
+  it("a session member changes neither lastSeq nor the block map", () => {
+    const state = stateWith([blockOf("a")]);
+
+    const next = applyServerMessage(state, sessionOf({}));
+
+    expect(next.lastSeq).toBe(state.lastSeq);
+    expect(next.order).toEqual(state.order);
+    expect(next.blocks).toBe(state.blocks);
+  });
+
+  it("a cursor member changes neither the order nor the blocks", () => {
+    const state = stateWith([blockOf("a")]);
+
+    const next = applyServerMessage(state, cursorOf({ seq: 1 }));
+
+    expect(next.cursor).toEqual(cursorOf({ seq: 1 }));
+    expect(next.lastSeq).toBe(state.lastSeq);
+    expect(next.order).toBe(state.order);
+    expect(next.blocks).toBe(state.blocks);
+  });
+
+  it("a cursor older than the applied document is dropped", () => {
+    const state: PreviewState = { ...stateWith([blockOf("a")]), lastSeq: 5 };
+
+    const next = applyServerMessage(state, cursorOf({ seq: 2 }));
+
+    expect(next).toBe(state);
+    expect(next.cursor).toBeNull();
+  });
+
+  it("both new members are handled before the document stale-seq guard", () => {
+    const state: PreviewState = { ...stateWith([blockOf("a")]), lastSeq: 5 };
+
+    const withSession = applyServerMessage(state, sessionOf({ width: "1000px" }));
+    const withCursor = applyServerMessage(withSession, cursorOf({ seq: 5 }));
+
+    expect(withCursor.session?.width).toBe("1000px");
+    expect(withCursor.cursor?.seq).toBe(5);
+    expect(withCursor.lastSeq).toBe(5);
+    expect(withCursor.blocks.size).toBe(1);
   });
 });

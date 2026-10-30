@@ -22,6 +22,10 @@
       "types": "./src/editor-frame.ts",
       "default": "./src/editor-frame.ts"
     },
+    "./config": {
+      "types": "./src/config/index.ts",
+      "default": "./src/config/index.ts"
+    },
     "./log-directory": {
       "types": "./src/log-directory.ts",
       "default": "./src/log-directory.ts"

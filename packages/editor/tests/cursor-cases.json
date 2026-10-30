@@ -1,0 +1,174 @@
+{
+  "cases": [
+    {
+      "name": "an unchanged-text cursor move sends one cursor frame and zero documents",
+      "events": [
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "cursor",
+          "kind": "CursorMoved",
+          "buf": 1,
+          "text": "# A\n",
+          "line": 3,
+          "fraction": 0.25
+        }
+      ],
+      "expect": {
+        "order": ["document", "cursor"],
+        "cursors": 1,
+        "lastCursor": {
+          "line": 3,
+          "fraction": 0.25
+        }
+      }
+    },
+    {
+      "name": "a changed-text cursor move sends the document and then its cursor",
+      "events": [
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "cursor",
+          "kind": "CursorMoved",
+          "buf": 1,
+          "text": "# A changed\n",
+          "line": 4,
+          "fraction": 0.5
+        }
+      ],
+      "expect": {
+        "order": ["document", "document", "cursor"],
+        "cursors": 1
+      }
+    },
+    {
+      "name": "a rebind sends a cursor even when the cursor did not move",
+      "events": [
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "rebind",
+          "buf": 1
+        }
+      ],
+      "expect": {
+        "order": ["document", "cursor"],
+        "cursors": 1
+      }
+    },
+    {
+      "name": "another buffer's cursor event sends nothing",
+      "events": [
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "cursor",
+          "kind": "CursorMoved",
+          "buf": 2,
+          "text": "# B\n",
+          "line": 2,
+          "fraction": 0.5
+        }
+      ],
+      "expect": {
+        "order": ["document"],
+        "cursors": 0
+      }
+    },
+    {
+      "name": "the cursor frame carries the 1-based line and the in-window fraction",
+      "events": [
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "cursor",
+          "kind": "CursorMoved",
+          "buf": 1,
+          "text": "# A\n",
+          "line": 11,
+          "fraction": 0.5
+        }
+      ],
+      "expect": {
+        "order": ["document", "cursor"],
+        "cursors": 1,
+        "lastCursor": {
+          "line": 11,
+          "fraction": 0.5
+        }
+      }
+    },
+    {
+      "name": "scroll.enabled = false sends no cursor frame",
+      "events": [
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "cursor",
+          "kind": "CursorMoved",
+          "buf": 1,
+          "text": "# A\n",
+          "line": 2,
+          "fraction": 0.1,
+          "enabled": false
+        }
+      ],
+      "expect": {
+        "order": ["document"],
+        "cursors": 0
+      }
+    }
+  ],
+  "fractions": [
+    {
+      "winline": 1,
+      "winheight": 20,
+      "fraction": 0
+    },
+    {
+      "winline": 11,
+      "winheight": 20,
+      "fraction": 0.5263157894736842
+    },
+    {
+      "winline": 1,
+      "winheight": 1,
+      "fraction": 0
+    },
+    {
+      "winline": 25,
+      "winheight": 20,
+      "fraction": 1
+    },
+    {
+      "winline": 0,
+      "winheight": 20,
+      "fraction": 0
+    }
+  ]
+}

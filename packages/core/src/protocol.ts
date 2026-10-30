@@ -54,6 +54,31 @@ const ErrorSchema = Schema.Struct({
   message: Schema.String,
 });
 
+/** Server-to-page only. Field order is pinned by the committed golden frames. */
+const SessionSchema = Schema.Struct({
+  _tag: Schema.Literal("session"),
+  // The live name: the session member supersedes `ready`'s value.
+  fileName: Schema.String,
+  title: Schema.NullOr(Schema.String),
+  showFileName: Schema.Boolean,
+  width: Schema.String,
+  fontSize: Schema.String,
+  markdownCss: Schema.NullOr(Schema.String),
+  codeCss: Schema.NullOr(Schema.String),
+  scrollMode: Schema.Literals(["middle", "top", "relative"]),
+  smoothScroll: Schema.Boolean,
+  themeMode: Schema.Literals(["system", "light", "dark"]),
+});
+
+/** Server-to-page only. `seq` is the document seq the cursor resolved against. */
+const CursorSchema = Schema.Struct({
+  _tag: Schema.Literal("cursor"),
+  blockId: BlockIdSchema,
+  line: Schema.Number,
+  fraction: Schema.Number,
+  seq: Schema.Number,
+});
+
 const HelloSchema = Schema.Struct({
   _tag: Schema.Literal("hello"),
   protocolVersion: Schema.Number,
@@ -68,6 +93,8 @@ export const ServerMessageSchema = Schema.Union([
   SnapshotSchema,
   PatchSchema,
   ErrorSchema,
+  SessionSchema,
+  CursorSchema,
 ]);
 
 export const ClientMessageSchema = Schema.Union([HelloSchema, AckSchema, RequestSnapshotSchema]);
@@ -78,6 +105,8 @@ export type ReadyMessage = Schema.Schema.Type<typeof ReadySchema>;
 export type SnapshotMessage = Schema.Schema.Type<typeof SnapshotSchema>;
 export type PatchMessage = Schema.Schema.Type<typeof PatchSchema>;
 export type ErrorMessage = Schema.Schema.Type<typeof ErrorSchema>;
+export type SessionMessage = Schema.Schema.Type<typeof SessionSchema>;
+export type CursorMessage = Schema.Schema.Type<typeof CursorSchema>;
 export type DocumentUpdate = SnapshotMessage | PatchMessage;
 
 const serverMessageJson = Schema.fromJsonString(ServerMessageSchema);

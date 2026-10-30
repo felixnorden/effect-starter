@@ -1,0 +1,41 @@
+{
+  "cases": [
+    {
+      "name": "a markdown buffer has the three commands and six maps",
+      "filetype": "markdown",
+      "filetypes": ["markdown"],
+      "global": false,
+      "expect": { "commands": true, "maps": true }
+    },
+    {
+      "name": "a non-markdown buffer has no commands unless the global flag is on",
+      "filetype": "text",
+      "filetypes": ["markdown"],
+      "global": false,
+      "expect": { "commands": false, "maps": false }
+    },
+    {
+      "name": "the global flag creates commands in a non-markdown buffer",
+      "filetype": "text",
+      "filetypes": ["markdown"],
+      "global": true,
+      "expect": { "commands": true, "maps": true }
+    },
+    {
+      "name": "removing a filetype leaves an already-open buffer's commands in place",
+      "filetype": "markdown",
+      "filetypes": ["markdown"],
+      "global": false,
+      "expect": { "commands": true, "staleCommands": true, "newBufferCommands": false }
+    },
+    {
+      "name": "loading beside the baseline plugin stops with both directories named",
+      "expect": { "conflict": true }
+    },
+    {
+      "name": "the floor message is unchanged",
+      "editors": ["vim"],
+      "expect": { "floor": true }
+    }
+  ]
+}

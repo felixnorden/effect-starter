@@ -53,9 +53,21 @@ describe("editor assets", () => {
       "nvim/lua/markdown_viewer/discovery.lua",
       "nvim/lua/markdown_viewer/messages.lua",
       "nvim/lua/markdown_viewer/refresh.lua",
+      "nvim/lua/markdown_viewer/config.lua",
+      "nvim/lua/markdown_viewer/init.lua",
+      "nvim/lua/markdown_viewer/health.lua",
+      "tests/config-cases.json",
+      "tests/load-cases.json",
       "tests/refresh-cases.json",
+      "tests/session-cases.json",
+      "tests/opener-cases.json",
+      "tests/sessions-driver.lua",
+      "tests/cursor-cases.json",
+      "tests/cursor-driver.lua",
+      "tests/cursor-replay.lua",
       "nvim/lua/markdown_viewer/generated/wire.lua",
       "nvim/lua/markdown_viewer/generated/codec.lua",
+      "nvim/lua/markdown_viewer/generated/config.lua",
     ];
 
     for (const file of required) {
@@ -66,6 +78,7 @@ describe("editor assets", () => {
     const frames = read("nvim/lua/markdown_viewer/frames.lua");
 
     expect(session).toContain('require("markdown_viewer.generated.codec")');
+    expect(read("nvim/plugin/markdown_viewer.lua")).toContain('require("markdown_viewer")');
     for (const text of [session, frames]) {
       expect(text).not.toContain("vim.json");
       expect(text).not.toContain("vim.mpack");
@@ -90,6 +103,12 @@ describe("editor assets", () => {
     }
   });
 
+  it("the protocol adapter imports only the frame encoder", () => {
+    const text = read("tests/protocol-adapter/adapter.ts");
+    const imports = [...text.matchAll(/from\s+["']([^"']+)["']/g)].map((match) => match[1]);
+    expect(imports).toEqual(["@mdv/core/editor-frame"]);
+  });
+
   it("has every Vim module and calls the generated codec", () => {
     const required = [
       "vim/plugin/markdown_viewer.vim",
@@ -98,8 +117,18 @@ describe("editor assets", () => {
       "vim/autoload/markdown_viewer/discovery.vim",
       "vim/autoload/markdown_viewer/messages.vim",
       "vim/autoload/markdown_viewer/refresh.vim",
+      "vim/autoload/markdown_viewer/config.vim",
+      "vim/autoload/markdown_viewer/init.vim",
+      "vim/autoload/markdown_viewer/health.vim",
       "vim/autoload/markdown_viewer/generated/wire.vim",
       "vim/autoload/markdown_viewer/generated/codec.vim",
+      "vim/autoload/markdown_viewer/generated/config.vim",
+      "tests/session-cases.json",
+      "tests/opener-cases.json",
+      "tests/sessions-driver.vim",
+      "tests/cursor-cases.json",
+      "tests/cursor-driver.vim",
+      "tests/cursor-replay.vim",
     ];
 
     for (const file of required) {
@@ -108,6 +137,7 @@ describe("editor assets", () => {
 
     const frames = read("vim/autoload/markdown_viewer/frames.vim");
     expect(frames).toContain("markdown_viewer#generated#codec#");
+    expect(read("vim/plugin/markdown_viewer.vim")).toContain("markdown_viewer#init#get()");
 
     const handWrittenFiles = vimModules();
     for (const file of handWrittenFiles) {
@@ -125,7 +155,9 @@ describe("editor assets", () => {
     const luaTags = tagsUnder(lua, /M\.tags = \{[^}]*\}/);
     const vimTags = tagsUnder(vim, /'tags': \[[^\]]*\]/);
 
-    expect(new Set(luaTags)).toEqual(new Set(["document", "ready", "error"]));
+    expect(new Set(luaTags)).toEqual(
+      new Set(["document", "ready", "error", "configuration", "cursor"]),
+    );
     expect(new Set(vimTags)).toEqual(new Set(luaTags));
     expect(versionUnder(lua, /M\.editor_protocol_version = (\d+)/)).toBe(EDITOR_PROTOCOL_VERSION);
     expect(versionUnder(vim, /'editor_protocol_version': (\d+)/)).toBe(EDITOR_PROTOCOL_VERSION);
@@ -138,7 +170,8 @@ describe("editor assets", () => {
     for (const command of commands) {
       expect(plugin).toContain(`command! ${command} `);
       const plug = `<Plug>(${command})`;
-      expect(plugin.split(plug).length - 1, command).toBe(2);
+      // Two scopes (buffer and global), two modes each.
+      expect(plugin.split(plug).length - 1, command).toBe(4);
     }
 
     const handWrittenFiles = vimModules();

@@ -64,6 +64,19 @@ const runners: readonly Runner[] = [
     ],
   },
   {
+    label: "nvim cursor cases",
+    binary: "nvim",
+    adapter: path.join(root, "packages/editor/tests/cursor-driver.lua"),
+    command: [
+      "nvim",
+      "--headless",
+      "-u",
+      "NONE",
+      "-l",
+      path.join(root, "packages/editor/tests/cursor-driver.lua"),
+    ],
+  },
+  {
     label: "vim",
     binary: "vim",
     adapter: path.join(root, "packages/editor/vim/tests/conformance.vim"),
@@ -75,6 +88,20 @@ const runners: readonly Runner[] = [
       "-es",
       "-S",
       path.join(root, "packages/editor/vim/tests/conformance.vim"),
+    ],
+  },
+  {
+    label: "vim cursor cases",
+    binary: "vim",
+    adapter: path.join(root, "packages/editor/tests/cursor-driver.vim"),
+    command: [
+      "vim",
+      "-u",
+      "NONE",
+      "-N",
+      "-es",
+      "-S",
+      path.join(root, "packages/editor/tests/cursor-driver.vim"),
     ],
   },
 ];

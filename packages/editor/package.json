@@ -6,7 +6,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "check:types": "bun src/check-codec.ts && tsc --noEmit",
+    "check:types": "bun src/check-codec.ts && bun src/check-config-tables.ts && tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {

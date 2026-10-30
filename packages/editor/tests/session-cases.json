@@ -1,0 +1,549 @@
+{
+  "cases": [
+    {
+      "name": "two buffers keep their own rows and stopping one leaves the other live",
+      "events": [
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "start",
+          "buf": 2,
+          "path": "/tmp/b.md",
+          "text": "# B\n"
+        },
+        {
+          "_tag": "stop",
+          "buf": 1
+        },
+        {
+          "_tag": "exit",
+          "job": 1,
+          "code": 0
+        }
+      ],
+      "expect": {
+        "rows": [2],
+        "opened": 2,
+        "closed": 1,
+        "sends": {
+          "1": ["configuration", "document"],
+          "2": ["configuration", "document"]
+        }
+      }
+    },
+    {
+      "name": "hiding a buffer with auto-close ends only its row",
+      "events": [
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "start",
+          "buf": 2,
+          "path": "/tmp/b.md",
+          "text": "# B\n"
+        },
+        {
+          "_tag": "hidden",
+          "buf": 1
+        }
+      ],
+      "expect": {
+        "rows": [2],
+        "opened": 2,
+        "closed": 1
+      }
+    },
+    {
+      "name": "auto-start opens one row on a configured filetype",
+      "events": [
+        {
+          "_tag": "config",
+          "values": {
+            "preview.auto_start": {
+              "value": true,
+              "source": "setup:preview.auto_start"
+            }
+          }
+        },
+        {
+          "_tag": "auto",
+          "buf": 2,
+          "path": "/tmp/b.md",
+          "text": "# B\n"
+        }
+      ],
+      "expect": {
+        "rows": [2],
+        "opened": 1,
+        "closed": 0
+      }
+    },
+    {
+      "name": "a second row's editor event sends on that row only",
+      "events": [
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "start",
+          "buf": 2,
+          "path": "/tmp/b.md",
+          "text": "# B\n"
+        },
+        {
+          "_tag": "text",
+          "buf": 2,
+          "text": "# B changed\n"
+        },
+        {
+          "_tag": "preview",
+          "buf": 2
+        }
+      ],
+      "expect": {
+        "rows": [1, 2],
+        "opened": 2,
+        "closed": 0,
+        "sends": {
+          "1": ["configuration", "document"],
+          "2": ["configuration", "document", "document"]
+        }
+      }
+    },
+    {
+      "name": "editor exit ends every row",
+      "events": [
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "start",
+          "buf": 2,
+          "path": "/tmp/b.md",
+          "text": "# B\n"
+        },
+        {
+          "_tag": "stop_all"
+        }
+      ],
+      "expect": {
+        "rows": [],
+        "opened": 2,
+        "closed": 2
+      }
+    },
+    {
+      "name": "a settings change pushes one configuration frame before the next document",
+      "events": [
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "config",
+          "values": {
+            "preview.width": {
+              "value": "1200px",
+              "source": "setup:preview.width"
+            }
+          }
+        },
+        {
+          "_tag": "config",
+          "values": {
+            "preview.width": {
+              "value": "1200px",
+              "source": "setup:preview.width"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "rows": [1],
+        "opened": 1,
+        "closed": 0,
+        "sends": {
+          "1": ["configuration", "document", "configuration"]
+        },
+        "configurations": 2
+      }
+    },
+    {
+      "name": "an endpoint-class change is not sent and names the next start",
+      "events": [
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "config",
+          "values": {
+            "server.port": {
+              "value": 4789,
+              "source": "setup:server.port"
+            }
+          }
+        },
+        {
+          "_tag": "config",
+          "values": {
+            "server.port": {
+              "value": 4789,
+              "source": "setup:server.port"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "rows": [1],
+        "opened": 1,
+        "closed": 0,
+        "sends": {
+          "1": ["configuration", "document"]
+        },
+        "configurations": 1,
+        "notifications": ["server.port", "next start"]
+      }
+    },
+    {
+      "name": "an editor-class change reports once and sends nothing",
+      "events": [
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "config",
+          "values": {
+            "preview.combine": {
+              "value": true,
+              "source": "setup:preview.combine"
+            }
+          }
+        },
+        {
+          "_tag": "config",
+          "values": {
+            "preview.combine": {
+              "value": true,
+              "source": "setup:preview.combine"
+            }
+          }
+        },
+        {
+          "_tag": "config",
+          "values": {
+            "preview.filetypes": {
+              "value": ["markdown", "mdx"],
+              "source": "setup:preview.filetypes"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "rows": [1],
+        "opened": 1,
+        "closed": 0,
+        "sends": {
+          "1": ["configuration", "document"]
+        },
+        "configurations": 1,
+        "notifications": ["preview.combine", "preview.filetypes", "next start"]
+      }
+    },
+    {
+      "name": "a combine switch does not end the row",
+      "events": [
+        {
+          "_tag": "config",
+          "values": {
+            "preview.combine": {
+              "value": true,
+              "source": "setup:preview.combine"
+            }
+          }
+        },
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "load",
+          "buf": 2,
+          "path": "/tmp/b.md",
+          "text": "# B\n"
+        },
+        {
+          "_tag": "enter",
+          "buf": 2
+        }
+      ],
+      "expect": {
+        "rows": [2],
+        "opened": 1,
+        "closed": 0,
+        "sends": {
+          "1": ["configuration", "document", "document", "cursor"]
+        }
+      }
+    },
+    {
+      "name": "combine auto-refresh off sends no text on a switch",
+      "events": [
+        {
+          "_tag": "config",
+          "values": {
+            "preview.combine": {
+              "value": true,
+              "source": "setup:preview.combine"
+            },
+            "preview.combine_auto_refresh": {
+              "value": false,
+              "source": "setup:preview.combine_auto_refresh"
+            }
+          }
+        },
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "load",
+          "buf": 2,
+          "path": "/tmp/b.md",
+          "text": "# B\n"
+        },
+        {
+          "_tag": "enter",
+          "buf": 2
+        }
+      ],
+      "expect": {
+        "rows": [2],
+        "opened": 1,
+        "closed": 0,
+        "sends": {
+          "1": ["configuration", "document", "cursor"]
+        }
+      }
+    },
+    {
+      "name": "a combine row ends when no member buffer remains",
+      "events": [
+        {
+          "_tag": "config",
+          "values": {
+            "preview.combine": {
+              "value": true,
+              "source": "setup:preview.combine"
+            }
+          }
+        },
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "load",
+          "buf": 2,
+          "path": "/tmp/b.md",
+          "text": "# B\n"
+        },
+        {
+          "_tag": "enter",
+          "buf": 2
+        },
+        {
+          "_tag": "unload",
+          "buf": 1
+        },
+        {
+          "_tag": "hidden",
+          "buf": 2
+        }
+      ],
+      "expect": {
+        "rows": [],
+        "opened": 1,
+        "closed": 1
+      }
+    },
+    {
+      "name": "the echo form writes the address and opens nothing",
+      "events": [
+        {
+          "_tag": "config",
+          "values": {
+            "server.echo_url": {
+              "value": true,
+              "source": "setup:server.echo_url"
+            }
+          }
+        },
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        }
+      ],
+      "expect": {
+        "rows": [1],
+        "opened": 0,
+        "closed": 0,
+        "notifications": ["http://127.0.0.1:1/"]
+      }
+    },
+    {
+      "name": "the named-browser form opens once",
+      "events": [
+        {
+          "_tag": "config",
+          "values": {
+            "browser.name": {
+              "value": "firefox",
+              "source": "setup:browser.name"
+            }
+          }
+        },
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        }
+      ],
+      "expect": {
+        "rows": [1],
+        "opened": 1,
+        "closed": 0
+      }
+    },
+    {
+      "name": "a non-loopback host is refused before a process exists",
+      "events": [
+        {
+          "_tag": "config",
+          "values": {
+            "server.open_ip": {
+              "value": "0.0.0.0",
+              "source": "setup:server.open_ip"
+            }
+          }
+        },
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        }
+      ],
+      "expect": {
+        "rows": [],
+        "opened": 0,
+        "closed": 0,
+        "jobs": 0,
+        "notifications": ["PT-5", "0.0.0.0"]
+      }
+    },
+    {
+      "name": "a sibling holding the configured port gets port 0",
+      "events": [
+        {
+          "_tag": "config",
+          "values": {
+            "server.port": {
+              "value": 3000,
+              "source": "setup:server.port"
+            }
+          }
+        },
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "start",
+          "buf": 2,
+          "path": "/tmp/b.md",
+          "text": "# B\n"
+        }
+      ],
+      "expect": {
+        "rows": [1, 2],
+        "opened": 2,
+        "closed": 0,
+        "ports": {
+          "1": "3000",
+          "2": "0"
+        }
+      }
+    },
+    {
+      "name": "a configuration value returns to its default and sends a restoring frame",
+      "events": [
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "config",
+          "values": {
+            "preview.width": {
+              "value": "1200px",
+              "source": "setup:preview.width"
+            }
+          }
+        },
+        {
+          "_tag": "config",
+          "values": {
+            "preview.width": {
+              "value": "900px",
+              "source": "default"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "rows": [1],
+        "opened": 1,
+        "closed": 0,
+        "sends": {
+          "1": ["configuration", "document", "configuration", "configuration"]
+        },
+        "configurations": 3
+      }
+    }
+  ]
+}

@@ -7,9 +7,13 @@ import {
   defaultRenderOptions,
   DocumentSession,
   Renderer,
+  resolveLine,
+  type CursorBlock,
   type DocumentModel,
 } from "@mdv/core";
 import { logDirectoryFrom } from "@mdv/core/log-directory";
+import { stylesheetAddress } from "@mdv/core/config";
+import type { CursorMessage, SessionMessage } from "@mdv/core/protocol";
 import { Cause, Config, Context, Effect, Exit, Layer, Ref, Scope } from "effect";
 import * as FileSystem from "effect/FileSystem";
 import * as HttpPlatform from "effect/http/HttpPlatform";
@@ -19,9 +23,12 @@ import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import appPackage from "../package.json" with { type: "json" };
+
 import { openBrowser } from "./browser.ts";
 import { defaultClientDir, isCompiled } from "./client-assets.ts";
-import { parseArgs, UsageError } from "./cli.ts";
+import { loopbackOnly, parseArgs, UsageError } from "./cli.ts";
+import { currentVersion, formatVersion, VERSION_FAILURE } from "./version-report.ts";
 import { DEV_PORT } from "./dev-config.ts";
 import { runEditorSession, type PageHandle } from "./editor-session.ts";
 import { stdinChunks, writeStdout } from "./editor-stdio.ts";
@@ -29,7 +36,7 @@ import { BuildError, ensureClientBuild, preparePreview } from "./lifecycle.ts";
 import { createLogSink, logFilePath } from "./log-sink.ts";
 import { PreviewSession } from "./preview-session.ts";
 import { ReadError, runRender } from "./render-command.ts";
-import { startServer } from "./server.ts";
+import { startServer, type StylesheetMap } from "./server.ts";
 import { mintSessionId } from "./session-identity.ts";
 import { fileSource, hashSource } from "./sources/file-source.ts";
 import { createFrameSource } from "./sources/frame-source.ts";
@@ -138,6 +145,9 @@ const runServer = (file: string, open: boolean) =>
               fileName: basename(file),
               title: document.title,
               currentSnapshot: preview.currentSnapshot,
+              currentSession: Effect.succeed(null),
+              currentCursor: Effect.succeed(null),
+              stylesheets: Effect.succeed({ markdown: null, code: null }),
               updates: preview.updates,
             });
             // Catch a save that landed between the startup render and the watch.
@@ -203,12 +213,13 @@ const runEditor = (
     const startPage = (options: {
       readonly fileName: string;
       readonly path: string;
+      readonly render: (
+        text: string,
+      ) => Effect.Effect<DocumentModel, import("@mdv/core").RenderError>;
     }): Effect.Effect<PageHandle> =>
       Effect.gen(function* () {
         const localRoot = options.path === "" ? null : dirname(options.path);
-        const frameProducer = yield* createFrameSource({
-          render: (text) => renderer.render(text, defaultRenderOptions),
-        });
+        const frameProducer = yield* createFrameSource({ render: options.render });
 
         // One page per process: the session layer's scope outlives this call.
         const pageScope = yield* Scope.make();
@@ -219,29 +230,90 @@ const runEditor = (
           Effect.provideService(Scope.Scope, pageScope),
         );
         const preview = Context.get(pageContext, PreviewSession);
+        const sessionRef = yield* Ref.make<SessionMessage | null>(null);
+        const cursorRef = yield* Ref.make<CursorMessage | null>(null);
+        const stylesheetsRef = yield* Ref.make<StylesheetMap>({ markdown: null, code: null });
+
+        // A reload re-reads the configured sheets, so an edited file gets a new address.
+        const currentSession = Effect.gen(function* () {
+          const member = yield* Ref.get(sessionRef);
+          if (member === null) return null;
+          const sheets = yield* Ref.get(stylesheetsRef);
+          const addressOf = (slot: "markdown" | "code"): string | null => {
+            const file = sheets[slot];
+            if (file === null) return null;
+            try {
+              return stylesheetAddress(slot, readFileSync(file.path));
+            } catch {
+              return null;
+            }
+          };
+          return {
+            ...member,
+            markdownCss: member.markdownCss === null ? null : addressOf("markdown"),
+            codeCss: member.codeCss === null ? null : addressOf("code"),
+          };
+        });
 
         const handle = yield* startServer({
           clientDir,
           localRoot,
+          currentLocalRoot: frameProducer.localRoot,
           imageRoot: defaultRenderOptions.imageRoot,
           fileName: options.fileName,
           title: null,
           currentSnapshot: preview.currentSnapshot,
+          currentSession: currentSession,
+          currentCursor: Ref.get(cursorRef),
+          stylesheets: Ref.get(stylesheetsRef),
           updates: preview.updates,
         }).pipe(Effect.provideContext(httpContext));
 
-        return { url: handle.url, push: frameProducer.push };
+        return {
+          url: handle.url,
+          push: frameProducer.push,
+          pushSession: (member) =>
+            Effect.gen(function* () {
+              yield* Ref.set(sessionRef, member);
+              yield* Effect.sync(() => handle.broadcast(member));
+            }),
+          pushCursor: (member) =>
+            Effect.gen(function* () {
+              yield* Ref.set(cursorRef, member);
+              yield* Effect.sync(() => handle.broadcast(member));
+            }),
+          currentSeq: preview.state.pipe(Effect.map((state) => state?.seq ?? 0)),
+          currentBlocks: preview.state.pipe(
+            Effect.map((state): readonly CursorBlock[] => state?.blocks ?? []),
+          ),
+          setStylesheet: (slot, file) =>
+            Ref.update(stylesheetsRef, (current) => ({ ...current, [slot]: file })),
+        };
+      });
+
+    const stylesheet = (slot: "markdown" | "code", path: string): Effect.Effect<string | null> =>
+      Effect.sync(() => {
+        try {
+          return stylesheetAddress(slot, readFileSync(path));
+        } catch {
+          return null;
+        }
       });
 
     const reason = yield* runEditorSession({
       input: stdinChunks,
       write: writeStdout,
       startPage,
-      render: (text) => renderer.render(text, defaultRenderOptions),
+      render: (text, options) => renderer.render(text, options),
       ensureClient: ensureClientBuild({
         exists: () => existsSync(clientIndex),
         build: buildClientQuietly,
       }),
+      stylesheet,
+      resolveCursor: (input) => {
+        const resolved = resolveLine(input);
+        return resolved === null ? null : { _tag: "cursor", ...resolved };
+      },
       sink,
       sessionId: mintSessionId(),
     });
@@ -251,14 +323,29 @@ const runEditor = (
 
 const command = parseArgs(process.argv.slice(2));
 
+const editorCommand = command instanceof UsageError || command._tag !== "editor" ? null : command;
+
+if (editorCommand !== null) {
+  const refused = loopbackOnly(editorCommand.host, editorCommand.expose);
+  if (refused !== null) {
+    console.error(refused.message);
+    process.exit(1);
+  }
+}
+
 const baseLayer = Layer.merge(
   Renderer.layer.pipe(Layer.provide(CodeHighlighting.layer)),
   DocumentSession.layer,
 );
 
 const httpLayer = BunHttpServer.layer({
-  hostname: "127.0.0.1",
-  port: command instanceof UsageError || command._tag !== "dev" ? 0 : DEV_PORT,
+  hostname: editorCommand === null ? "127.0.0.1" : editorCommand.host,
+  port:
+    editorCommand !== null
+      ? editorCommand.port
+      : command instanceof UsageError || command._tag !== "dev"
+        ? 0
+        : DEV_PORT,
 });
 
 const failureMessage = async (effect: Effect.Effect<unknown, Error>): Promise<string | null> => {
@@ -274,6 +361,12 @@ const run = async (): Promise<string | null> => {
   if (command instanceof UsageError) {
     return failureMessage(Effect.fail(command).pipe(Effect.provide(baseLayer)));
   }
+  if (command._tag === "version") {
+    const text = formatVersion(currentVersion(appPackage.version, Bun.version));
+    if (text === null) return VERSION_FAILURE;
+    console.log(text);
+    return null;
+  }
   if (command._tag === "render") {
     return failureMessage(
       runRender({ file: command.file, write: (line) => console.log(line) }).pipe(
@@ -287,9 +380,15 @@ const run = async (): Promise<string | null> => {
     );
     if (Exit.isFailure(exit)) {
       const error = Cause.squash(exit.cause);
-      return typeof error === "object" && error !== null && "message" in error
-        ? String(error.message)
-        : String(error);
+      const message =
+        typeof error === "object" && error !== null && "message" in error
+          ? String(error.message)
+          : String(error);
+      const port = command.port;
+      if (port > 0 && /listen|EADDRINUSE|address/i.test(message)) {
+        return `${message} The configured port ${port} is in use; set server.port or stop the other process.`;
+      }
+      return message;
     }
     // The page server holds an open listener; end-of-input ends the process.
     process.exit(exit.value);

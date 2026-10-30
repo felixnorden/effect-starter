@@ -2,14 +2,23 @@
 // @effect-diagnostics unstableApiUsage:off
 import { it } from "@effect/vitest";
 import { NodeHttpServer } from "@effect/platform-node";
-import { DocumentSession, RenderError, type DocumentModel } from "@mdv/core";
+import {
+  DocumentSession,
+  RenderError,
+  resolveLine,
+  type BlockId,
+  type CursorBlock,
+  type DocumentModel,
+  type RenderOptions,
+} from "@mdv/core";
 import { MAX_FRAME_BYTES, encodeFrame } from "@mdv/core/editor-frame";
 import {
   EDITOR_PROTOCOL_VERSION,
+  type ConfigurationMessage,
   type DocumentMessage,
   type ServerToEditorMessage,
 } from "@mdv/core/editor-protocol";
-import type { ServerMessage } from "@mdv/core/protocol";
+import type { CursorMessage, ServerMessage, SessionMessage } from "@mdv/core/protocol";
 import { Cause, Context, Effect, Fiber, Layer, Queue, Scope, Stream } from "effect";
 import * as FileSystem from "effect/FileSystem";
 import * as HttpPlatform from "effect/http/HttpPlatform";
@@ -32,7 +41,21 @@ const documentOf = (text: string, path = "/docs/a.md"): DocumentMessage => ({
   text,
 });
 
+const configurationOf = (
+  values: readonly { readonly key: string; readonly value: unknown; readonly source: string }[],
+): ConfigurationMessage => ({
+  _tag: "configuration",
+  editorProtocolVersion: EDITOR_PROTOCOL_VERSION,
+  values,
+});
+
 const modelOf = (): DocumentModel => ({ title: null, optionsHash: "options", blocks: [] });
+
+const fixtureBlocks = [
+  { id: "b1" as BlockId, range: { startLine: 1, endLine: 4 } },
+  { id: "b2" as BlockId, range: { startLine: 5, endLine: 9 } },
+  { id: "b3" as BlockId, range: { startLine: 10, endLine: 12 } },
+];
 
 const modelOfWithText = (text: string): DocumentModel => ({
   title: null,
@@ -72,7 +95,10 @@ type SessionRun = {
   readonly written: readonly ServerToEditorMessage[];
   readonly lines: readonly string[];
   readonly renders: readonly string[];
+  readonly renderOptions: readonly RenderOptions[];
   readonly pushes: readonly DocumentMessage[];
+  readonly sessions: readonly SessionMessage[];
+  readonly cursors: readonly CursorMessage[];
   readonly pages: readonly { readonly fileName: string; readonly path: string }[];
   readonly order: readonly string[];
   readonly reason: string;
@@ -83,9 +109,14 @@ type HarnessOptions = {
   readonly startPage?: (options: {
     readonly fileName: string;
     readonly path: string;
+    readonly render: (text: string) => Effect.Effect<DocumentModel, RenderError>;
   }) => Effect.Effect<PageHandle, PageError>;
-  readonly render?: (text: string) => Effect.Effect<DocumentModel, import("@mdv/core").RenderError>;
+  readonly render?: (
+    text: string,
+    options: RenderOptions,
+  ) => Effect.Effect<DocumentModel, import("@mdv/core").RenderError>;
   readonly ensureClient?: Effect.Effect<void, BuildError>;
+  readonly stylesheet?: (slot: "markdown" | "code", path: string) => Effect.Effect<string | null>;
   readonly sinkSuffix?: string;
   readonly sessionId?: string;
 };
@@ -96,9 +127,13 @@ const runSession = (options: HarnessOptions = {}): Effect.Effect<SessionRun> =>
     const written: ServerToEditorMessage[] = [];
     const lines: string[] = [];
     const renders: string[] = [];
+    const renderOptions: RenderOptions[] = [];
     const pushes: DocumentMessage[] = [];
+    const sessions: SessionMessage[] = [];
+    const cursors: CursorMessage[] = [];
     const pages: { fileName: string; path: string }[] = [];
     const order: string[] = [];
+    let pageSeq = 0;
 
     const startPage =
       options.startPage ??
@@ -108,7 +143,19 @@ const runSession = (options: HarnessOptions = {}): Effect.Effect<SessionRun> =>
           push: (document: DocumentMessage) =>
             Effect.sync(() => {
               pushes.push(document);
+              pageSeq += 1;
             }),
+          pushSession: (member: SessionMessage) =>
+            Effect.sync(() => {
+              sessions.push(member);
+            }),
+          pushCursor: (member: CursorMessage) =>
+            Effect.sync(() => {
+              cursors.push(member);
+            }),
+          currentSeq: Effect.sync(() => pageSeq),
+          currentBlocks: Effect.succeed(fixtureBlocks),
+          setStylesheet: () => Effect.void,
         }));
 
     const fiber = yield* Effect.forkChild(
@@ -121,17 +168,25 @@ const runSession = (options: HarnessOptions = {}): Effect.Effect<SessionRun> =>
           }),
         startPage: (pageOptions) =>
           Effect.sync(() => {
-            pages.push(pageOptions);
+            pages.push({ fileName: pageOptions.fileName, path: pageOptions.path });
             order.push("bind");
           }).pipe(Effect.andThen(startPage(pageOptions))),
-        render: (text) =>
+        render: (text, renderOptionsValue) =>
           Effect.sync(() => {
             renders.push(text);
+            renderOptions.push(renderOptionsValue);
             order.push("render");
-          }).pipe(Effect.andThen(options.render?.(text) ?? Effect.succeed(modelOf()))),
+          }).pipe(
+            Effect.andThen(options.render?.(text, renderOptionsValue) ?? Effect.succeed(modelOf())),
+          ),
         ensureClient: Effect.sync(() => {
           order.push("build");
         }).pipe(Effect.andThen(options.ensureClient ?? Effect.void)),
+        stylesheet: options.stylesheet ?? (() => Effect.succeed("/stylesheet/slot/hash")),
+        resolveCursor: (input) => {
+          const resolved = resolveLine(input);
+          return resolved === null ? null : { _tag: "cursor", ...resolved };
+        },
         sink: {
           write: (line) => {
             lines.push(options.sinkSuffix === undefined ? line : `${line} ${options.sinkSuffix}`);
@@ -147,7 +202,18 @@ const runSession = (options: HarnessOptions = {}): Effect.Effect<SessionRun> =>
     yield* Queue.end(queue);
 
     const reason = yield* Fiber.join(fiber);
-    return { written, lines, renders, pushes, pages, order, reason };
+    return {
+      written,
+      lines,
+      renders,
+      renderOptions,
+      pushes,
+      sessions,
+      cursors,
+      pages,
+      order,
+      reason,
+    };
   });
 
 describe("runEditorSession", () => {
@@ -347,6 +413,27 @@ describe("runEditorSession", () => {
     }),
   );
 
+  it.effect("a rebind pushes one session member with the new file name and title", () =>
+    Effect.gen(function* () {
+      const run = yield* runSession({
+        chunks: [
+          [encodeFrame(documentOf("# one\n", "/docs/a.md"))],
+          [encodeFrame(documentOf("# two\n", "/other/b.md"))],
+        ],
+        render: (text) =>
+          Effect.succeed({
+            ...modelOf(),
+            title: text.includes("two") ? "Notes B" : null,
+          }),
+      });
+
+      const rebound = run.sessions.filter((member) => member.fileName === "b.md");
+      expect(rebound).toHaveLength(1);
+      expect(rebound[0]?.title).toBe("Notes B");
+      expect(run.sessions[0]?.fileName).toBe("a.md");
+    }),
+  );
+
   it.effect("keeps the row and the page when a later render fails", () =>
     Effect.gen(function* () {
       const run = yield* runSession({
@@ -364,7 +451,7 @@ describe("runEditorSession", () => {
     }),
   );
 
-  it.effect("keeps the first document's local root when a later path differs", () =>
+  it.effect("a rebound document moves the local root", () =>
     Effect.gen(function* () {
       const source = yield* createFrameSource({
         render: () => Effect.succeed(modelOf()),
@@ -374,10 +461,65 @@ describe("runEditorSession", () => {
           [encodeFrame(documentOf("# one\n", "/docs/a.md"))],
           [encodeFrame(documentOf("# two\n", "/other/b.md"))],
         ],
-        startPage: () => Effect.succeed({ url: "http://127.0.0.1:4321/", push: source.push }),
+        startPage: () =>
+          Effect.succeed({
+            url: "http://127.0.0.1:4321/",
+            push: source.push,
+            pushSession: () => Effect.void,
+            pushCursor: () => Effect.void,
+            currentSeq: Effect.succeed(1),
+            currentBlocks: Effect.succeed(fixtureBlocks),
+            setStylesheet: () => Effect.void,
+          }),
       });
 
-      expect(yield* source.localRoot).toBe("/docs");
+      expect(yield* source.localRoot).toBe("/other");
+    }),
+  );
+
+  it.effect("a cursor frame sends one page cursor member and calls no render", () =>
+    Effect.gen(function* () {
+      const run = yield* runSession({
+        chunks: [
+          [encodeFrame(documentOf("# hello\n"))],
+          [
+            encodeFrame({
+              _tag: "cursor",
+              editorProtocolVersion: EDITOR_PROTOCOL_VERSION,
+              line: 7,
+              fraction: 0.5,
+            }),
+          ],
+        ],
+      });
+
+      expect(run.renders).toHaveLength(1);
+      expect(run.cursors).toEqual([
+        { _tag: "cursor", blockId: "b2", line: 7, fraction: 0.5, seq: 1 },
+      ]);
+      expect(run.written.map((message) => message._tag)).toEqual(["ready"]);
+    }),
+  );
+
+  it.effect("a cursor outside every block sends nothing", () =>
+    Effect.gen(function* () {
+      const run = yield* runSession({
+        chunks: [
+          [encodeFrame(documentOf("# hello\n"))],
+          [
+            encodeFrame({
+              _tag: "cursor",
+              editorProtocolVersion: EDITOR_PROTOCOL_VERSION,
+              line: 40,
+              fraction: 0.5,
+            }),
+          ],
+        ],
+      });
+
+      expect(run.renders).toHaveLength(1);
+      expect(run.cursors).toHaveLength(0);
+      expect(run.written.map((message) => message._tag)).toEqual(["ready"]);
     }),
   );
 
@@ -392,11 +534,13 @@ describe("runEditorSession", () => {
         >();
         let snapshot: Effect.Effect<ServerMessage | null> = Effect.succeed(null);
 
-        const startPage = (options: { fileName: string; path: string }) =>
+        const startPage = (options: {
+          fileName: string;
+          path: string;
+          render: (text: string) => Effect.Effect<DocumentModel, RenderError>;
+        }) =>
           Effect.gen(function* () {
-            const source = yield* createFrameSource({
-              render: (text) => Effect.succeed(modelOfWithText(text)),
-            });
+            const source = yield* createFrameSource({ render: options.render });
             const pageScope = yield* Scope.make();
             const pageContext = yield* Layer.build(
               PreviewSession.layer(source.deps).pipe(Layer.provide(DocumentSession.layer)),
@@ -411,10 +555,23 @@ describe("runEditorSession", () => {
               fileName: options.fileName,
               title: null,
               currentSnapshot: preview.currentSnapshot,
+              currentSession: Effect.succeed(null),
+              currentCursor: Effect.succeed(null),
+              stylesheets: Effect.succeed({ markdown: null, code: null }),
               updates: preview.updates,
             }).pipe(Effect.provideContext(httpContext));
 
-            return { url: handle.url, push: source.push };
+            return {
+              url: handle.url,
+              push: source.push,
+              pushSession: () => Effect.void,
+              pushCursor: () => Effect.void,
+              currentSeq: preview.state.pipe(Effect.map((state) => state?.seq ?? 0)),
+              currentBlocks: preview.state.pipe(
+                Effect.map((state): readonly CursorBlock[] => state?.blocks ?? []),
+              ),
+              setStylesheet: () => Effect.void,
+            };
           });
 
         const queue = yield* Queue.unbounded<Uint8Array, Cause.Done>();
@@ -428,6 +585,8 @@ describe("runEditorSession", () => {
           startPage,
           render: (text) => Effect.succeed(modelOfWithText(text)),
           ensureClient: Effect.void,
+          stylesheet: () => Effect.succeed("/stylesheet/slot/hash"),
+          resolveCursor: () => null,
           sink: { write: () => {} },
           sessionId: "session-1",
         }).pipe(Effect.forkChild);
@@ -468,6 +627,242 @@ describe("runEditorSession", () => {
       }
 
       rmSync(clientDir, { recursive: true, force: true });
+    }),
+  );
+
+  it.effect("renders once with the configuration frame that arrives first", () =>
+    Effect.gen(function* () {
+      const run = yield* runSession({
+        chunks: [
+          [
+            encodeFrame(
+              configurationOf([
+                {
+                  key: "render.markdown_it",
+                  value: { breaks: true },
+                  source: "setup:render.markdown_it",
+                },
+              ]),
+            ),
+            encodeFrame(documentOf("# hello\n")),
+          ],
+        ],
+      });
+
+      expect(run.renders).toHaveLength(1);
+      expect(run.renderOptions[0]?.breaks).toBe(true);
+      expect(run.written[0]?._tag).toBe("ready");
+      expect(run.sessions).toHaveLength(1);
+    }),
+  );
+
+  it.effect(
+    "renders with defaults when the document arrives first and applies the later configuration",
+    () =>
+      Effect.gen(function* () {
+        const run = yield* runSession({
+          chunks: [
+            [encodeFrame(documentOf("# hello\n"))],
+            [
+              encodeFrame(
+                configurationOf([
+                  {
+                    key: "render.markdown_it",
+                    value: { breaks: true },
+                    source: "setup:render.markdown_it",
+                  },
+                ]),
+              ),
+            ],
+          ],
+        });
+
+        expect(run.renders).toHaveLength(2);
+        expect(run.renderOptions[0]?.breaks).toBe(false);
+        expect(run.renderOptions[1]?.breaks).toBe(true);
+        expect(run.written[0]?._tag).toBe("ready");
+      }),
+  );
+
+  it.effect("a page-display change sends one session member and calls no render", () =>
+    Effect.gen(function* () {
+      const run = yield* runSession({
+        chunks: [
+          [encodeFrame(documentOf("# hello\n"))],
+          [
+            encodeFrame(
+              configurationOf([
+                { key: "preview.width", value: "1200px", source: "setup:preview.width" },
+              ]),
+            ),
+          ],
+        ],
+      });
+
+      expect(run.renders).toHaveLength(1);
+      expect(run.sessions).toHaveLength(2);
+      expect(run.sessions[1]?.width).toBe("1200px");
+    }),
+  );
+
+  it.effect("a configuration frame whose values is not an array answers one config error", () =>
+    Effect.gen(function* () {
+      const malformed = {
+        _tag: "configuration",
+        editorProtocolVersion: EDITOR_PROTOCOL_VERSION,
+        values: { key: "preview.width" },
+      } as unknown as ConfigurationMessage;
+      const run = yield* runSession({
+        chunks: [[encodeFrame(documentOf("# hello\n"))], [encodeFrame(malformed)]],
+      });
+
+      expect(run.written.at(-1)).toMatchObject({
+        _tag: "error",
+        stage: "config",
+        message: "invalid configuration: values is not an array",
+      });
+    }),
+  );
+
+  it.effect("a frame replaces the cell, so a reverted key returns to its default", () =>
+    Effect.gen(function* () {
+      const run = yield* runSession({
+        chunks: [
+          [encodeFrame(documentOf("# hello\n"))],
+          [
+            encodeFrame(
+              configurationOf([
+                { key: "preview.width", value: "1200px", source: "setup:preview.width" },
+              ]),
+            ),
+          ],
+          [encodeFrame(configurationOf([]))],
+        ],
+      });
+
+      expect(run.sessions.at(-1)?.width).toBe("900px");
+      expect(run.sessions.at(-1)?._tag).toBe("session");
+    }),
+  );
+
+  it.effect("a configured stylesheet path that names no file answers one config error", () =>
+    Effect.gen(function* () {
+      const run = yield* runSession({
+        chunks: [
+          [encodeFrame(documentOf("# hello\n"))],
+          [
+            encodeFrame(
+              configurationOf([
+                {
+                  key: "theme.markdown_css",
+                  value: "/missing.css",
+                  source: "setup:theme.markdown_css",
+                },
+              ]),
+            ),
+          ],
+          [encodeFrame(documentOf("# again\n"))],
+        ],
+        stylesheet: () => Effect.succeed(null),
+      });
+
+      const errors = run.written.filter((message) => message._tag === "error");
+      expect(errors).toHaveLength(1);
+      const [error] = errors;
+      expect(error?._tag === "error" ? error.stage : null).toBe("config");
+      expect(error?._tag === "error" ? error.message : "").toContain("theme.markdown_css");
+      expect(error?._tag === "error" ? error.message : "").toContain("/missing.css");
+      expect(run.sessions.at(-1)?.markdownCss).toBeNull();
+      expect(run.renders).toHaveLength(2);
+    }),
+  );
+
+  it.effect("an endpoint-class value applies only at the next start", () =>
+    Effect.gen(function* () {
+      const run = yield* runSession({
+        chunks: [
+          [encodeFrame(documentOf("# hello\n"))],
+          [
+            encodeFrame(
+              configurationOf([{ key: "server.port", value: 4789, source: "setup:server.port" }]),
+            ),
+          ],
+        ],
+      });
+
+      const errors = run.written.filter((message) => message._tag === "error");
+      expect(errors).toHaveLength(1);
+      expect(errors[0]?._tag === "error" ? errors[0].message : "").toContain("server.port");
+      expect(errors[0]?._tag === "error" ? errors[0].message : "").toContain("next start");
+      expect(run.renders).toHaveLength(1);
+    }),
+  );
+
+  it.effect("an editor-class change is reported once and never sent", () =>
+    Effect.gen(function* () {
+      const frame = encodeFrame(
+        configurationOf([{ key: "preview.combine", value: true, source: "setup:preview.combine" }]),
+      );
+      const run = yield* runSession({
+        chunks: [[encodeFrame(documentOf("# hello\n"))], [frame], [frame], [frame]],
+      });
+
+      const errors = run.written.filter((message) => message._tag === "error");
+      expect(errors).toHaveLength(1);
+      expect(errors[0]?._tag === "error" ? errors[0].message : "").toContain("preview.combine");
+      expect(errors[0]?._tag === "error" ? errors[0].message : "").toContain("next start");
+      expect(run.renders).toHaveLength(1);
+    }),
+  );
+
+  it.effect("a render change re-renders exactly once from the retained text", () =>
+    Effect.gen(function* () {
+      const run = yield* runSession({
+        chunks: [
+          [encodeFrame(documentOf("# hello\n"))],
+          [
+            encodeFrame(
+              configurationOf([
+                {
+                  key: "render.markdown_it",
+                  value: { breaks: true },
+                  source: "setup:render.markdown_it",
+                },
+              ]),
+            ),
+          ],
+        ],
+      });
+
+      expect(run.renders).toEqual(["# hello\n", "# hello\n"]);
+      expect(run.renderOptions[1]?.breaks).toBe(true);
+      expect(run.pushes).toHaveLength(2);
+    }),
+  );
+
+  it.effect("a rejected value answers one config error with the four fields", () =>
+    Effect.gen(function* () {
+      const run = yield* runSession({
+        chunks: [
+          [encodeFrame(documentOf("# hello\n"))],
+          [
+            encodeFrame(
+              configurationOf([
+                { key: "scroll.mode", value: "diagonal", source: "setup:scroll.mode" },
+              ]),
+            ),
+          ],
+          [encodeFrame(documentOf("# after\n"))],
+        ],
+      });
+
+      const errors = run.written.filter((message) => message._tag === "error");
+      expect(errors).toHaveLength(1);
+      expect(errors[0]?._tag === "error" ? errors[0].stage : null).toBe("config");
+      expect(errors[0]?._tag === "error" ? errors[0].message : "").toBe(
+        "invalid configuration: key scroll.mode, expected middle|top|relative, received diagonal, source setup:scroll.mode",
+      );
+      expect(run.renders).toHaveLength(2);
     }),
   );
 });

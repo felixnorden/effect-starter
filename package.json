@@ -17,8 +17,10 @@
     "bench": "bun packages/app/src/bench.ts",
     "fixtures:generate": "bun scripts/generate-fixtures.ts",
     "frames:generate": "bun scripts/generate-editor-frames.ts",
+    "config:generate": "bun scripts/generate-config-tables.ts",
     "editor:probe": "bun scripts/editor-probe.ts",
     "editor:conformance": "bun scripts/editor-conformance.ts",
+    "editor:sessions": "bun scripts/editor-sessions.ts",
     "editor:lifecycle": "bun scripts/editor-lifecycle.ts",
     "editor:refresh": "bun scripts/editor-refresh.ts",
     "editor:bench": "bun scripts/editor-bench.ts",
@@ -38,7 +40,9 @@
     "preview": "bun packages/app/src/main.ts preview",
     "bench:browser": "bun run --filter '@mdv/preview' bench:browser",
     "check:a11y": "bun run --filter '@mdv/preview' check:a11y",
-    "themes:generate": "bun scripts/generate-theme-sheets.ts"
+    "themes:generate": "bun scripts/generate-theme-sheets.ts",
+    "editor:health": "bun scripts/editor-health.ts",
+    "editor:protocol": "bun scripts/editor-protocol.ts"
   },
   "devDependencies": {
     "@effect/tsgo": "catalog:",

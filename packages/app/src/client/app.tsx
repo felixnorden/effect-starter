@@ -1,7 +1,8 @@
-import type { ChangeEvent, RefObject } from "react";
+import type { ChangeEvent, CSSProperties, RefObject } from "react";
 
 import type { Display, ThemeSlot } from "./display.ts";
-import { optionsForMode, sheetUrl } from "./display.ts";
+import { optionsForMode } from "./display.ts";
+import { fileNameLineOf, headingOf, layoutStyleOf, sheetLinks } from "./session.ts";
 import type { PreviewState } from "./store.ts";
 import type { Theme } from "./theme.ts";
 
@@ -17,6 +18,8 @@ export type AppProps = {
   /** The element the scroll anchor measures; the page owns the shell. */
   readonly containerRef?: RefObject<HTMLElement | null>;
   readonly statusRef?: RefObject<HTMLParagraphElement | null>;
+  /** Set when the socket closes; the page then names the restart command. */
+  readonly ended?: string | null;
 };
 
 export const App = ({
@@ -28,30 +31,29 @@ export const App = ({
   onToggleTheme,
   containerRef,
   statusRef,
+  ended,
 }: AppProps) => {
-  // The page owns the single h1: the title, else the file name.
-  const heading = state.title ?? state.fileName;
+  const heading = headingOf(state.session, state.title, state.fileName);
+  const fileLine = fileNameLineOf(state.session, state.title, state.fileName);
 
   return (
-    <div className="preview-shell">
-      <link
-        data-slot="light"
-        rel="stylesheet"
-        href={sheetUrl(display.light.id)}
-        precedence="mdv-code-theme"
-      />
-      <link
-        data-slot="dark"
-        rel="stylesheet"
-        href={sheetUrl(display.dark.id)}
-        precedence="mdv-code-theme"
-      />
+    <div
+      className="preview-shell"
+      style={layoutStyleOf(state.session) as CSSProperties | undefined}
+    >
+      {sheetLinks(display, state.session).map((link) => (
+        <link
+          key={link.slot}
+          data-slot={link.slot}
+          rel="stylesheet"
+          href={link.href}
+          precedence="mdv-code-theme"
+        />
+      ))}
 
       <header className="preview-header">
         {heading === null ? null : <h1 className="preview-title">{heading}</h1>}
-        {state.title === null || state.fileName === null ? null : (
-          <span className="preview-file-name">{state.fileName}</span>
-        )}
+        {fileLine === null ? null : <span className="preview-file-name">{fileLine}</span>}
         {onToggleTheme === undefined ? null : (
           <button type="button" className="preview-theme-toggle" onClick={onToggleTheme}>
             {theme === "dark" ? "Light" : "Dark"}
@@ -87,6 +89,11 @@ export const App = ({
       </header>
 
       <main className="preview-main" ref={containerRef}>
+        {ended === undefined || ended === null ? null : (
+          <div role="alert" className="preview-banner">
+            The preview ended: {ended}. Restart with :MarkdownPreview.
+          </div>
+        )}
         {state.banner === null ? null : (
           <div role="alert" className="preview-banner">
             {state.banner.stage}: {state.banner.message}

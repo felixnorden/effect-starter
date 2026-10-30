@@ -30,20 +30,49 @@ const ErrorSchema = Schema.Struct({
   _tag: Schema.Literal("error"),
   editorProtocolVersion: Schema.Number,
   // Closed set. `client` reports a failed client build through the same path.
-  stage: Schema.Literals(["bind", "protocol", "render", "client"]),
+  stage: Schema.Literals(["bind", "protocol", "render", "client", "config"]),
   message: Schema.String,
   // Present on a version mismatch only.
   clientVersion: Schema.optionalKey(Schema.Number),
   serverVersion: Schema.optionalKey(Schema.Number),
 });
 
-/** The whole editor message set: three tags, and no `end`. */
-export const EditorMessageSchema = Schema.Union([DocumentSchema, ReadySchema, ErrorSchema]);
+export type ConfigurationValue = {
+  readonly key: string;
+  readonly value: unknown;
+  readonly source: string;
+};
+
+const ConfigurationSchema = Schema.Struct({
+  _tag: Schema.Literal("configuration"),
+  editorProtocolVersion: Schema.Number,
+  // Declaration order. Only server-owned classes, non-default and non-null.
+  // An envelope field: the adapter encodes it, the server re-validates it.
+  values: Schema.Unknown,
+});
+
+const CursorSchema = Schema.Struct({
+  _tag: Schema.Literal("cursor"),
+  editorProtocolVersion: Schema.Number,
+  line: Schema.Number, // 1-based
+  fraction: Schema.Number, // (winline - 1) / max(1, winheight - 1), 0..1 (G-47)
+});
+
+/** The whole editor message set: five tags, and no `end`. */
+export const EditorMessageSchema = Schema.Union([
+  DocumentSchema,
+  ReadySchema,
+  ErrorSchema,
+  ConfigurationSchema,
+  CursorSchema,
+]);
 
 export type EditorMessage = Schema.Schema.Type<typeof EditorMessageSchema>;
 export type DocumentMessage = Schema.Schema.Type<typeof DocumentSchema>;
 export type ReadyMessage = Schema.Schema.Type<typeof ReadySchema>;
 export type ErrorMessage = Schema.Schema.Type<typeof ErrorSchema>;
+export type ConfigurationMessage = Schema.Schema.Type<typeof ConfigurationSchema>;
+export type CursorMessage = Schema.Schema.Type<typeof CursorSchema>;
 export type ServerToEditorMessage = ReadyMessage | ErrorMessage;
 
 /** A version difference is reported as a value, never as a schema failure. */

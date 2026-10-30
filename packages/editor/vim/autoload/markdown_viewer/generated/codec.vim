@@ -13,9 +13,11 @@ function! s:Matches(value, kind, values) abort
   if a:kind ==# 'string'
     return type(a:value) == v:t_string
   elseif a:kind ==# 'number'
-    return type(a:value) == v:t_number
+    return type(a:value) == v:t_number || type(a:value) == v:t_float
   elseif a:kind ==# 'literals'
     return index(a:values, a:value) >= 0
+  elseif a:kind ==# 'json'
+    return type(a:value) != v:t_none
   endif
   return 0
 endfunction

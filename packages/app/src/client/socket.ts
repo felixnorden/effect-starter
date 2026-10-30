@@ -12,9 +12,14 @@ export type ClientSocket = {
   readonly close: () => void;
 };
 
+export type SocketFactory = (url: string) => WebSocket;
+
 export type ConnectOptions = {
   readonly onMessage: (message: ServerMessage) => void;
+  readonly onClose?: () => void;
   readonly url?: string;
+  /** The test seam; production uses the platform WebSocket. */
+  readonly factory?: SocketFactory;
 };
 
 const defaultUrl = (): string => {
@@ -28,7 +33,10 @@ const defaultUrl = (): string => {
  * the same sequence.
  */
 export const connectClient = (options: ConnectOptions): ClientSocket => {
-  const socket = new WebSocket(options.url ?? defaultUrl());
+  const socket = (options.factory ?? ((url: string) => new WebSocket(url)))(
+    options.url ?? defaultUrl(),
+  );
+  let closing = false;
 
   const send = (message: ClientMessage): void => {
     if (socket.readyState === WebSocket.OPEN) {
@@ -42,6 +50,10 @@ export const connectClient = (options: ConnectOptions): ClientSocket => {
     send({ _tag: "requestSnapshot" });
   });
 
+  socket.addEventListener("close", () => {
+    if (!closing) options.onClose?.();
+  });
+
   socket.addEventListener("message", (event) => {
     const decoded = decodeServerMessage(String(event.data));
     if (!Result.isSuccess(decoded)) return;
@@ -52,6 +64,9 @@ export const connectClient = (options: ConnectOptions): ClientSocket => {
 
   return {
     send,
-    close: () => socket.close(),
+    close: () => {
+      closing = true;
+      socket.close();
+    },
   };
 };

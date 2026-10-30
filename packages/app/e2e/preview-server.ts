@@ -66,3 +66,96 @@ export const startPreview = async (
     },
   };
 };
+
+export type EditorFrame =
+  | {
+      readonly _tag: "document";
+      readonly editorProtocolVersion: number;
+      readonly path: string;
+      readonly text: string;
+    }
+  | {
+      readonly _tag: "configuration";
+      readonly editorProtocolVersion: number;
+      readonly values: readonly unknown[];
+    }
+  | {
+      readonly _tag: "cursor";
+      readonly editorProtocolVersion: number;
+      readonly line: number;
+      readonly fraction: number;
+    };
+
+export type EditorPage = {
+  readonly url: string;
+  readonly write: (message: EditorFrame) => void;
+  readonly stop: () => Promise<void>;
+};
+
+/** Spawn the real editor entry and write the frames a page restore needs. */
+export const startEditorPage = async (options: {
+  readonly configuration?: readonly unknown[];
+  readonly document?: { readonly path: string; readonly text: string };
+}): Promise<EditorPage> => {
+  const child: ChildProcess = spawn("bun", [resolve(here, "../src/main.ts"), "editor"], {
+    cwd: repo,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+
+  const write = (message: EditorFrame): void => {
+    child.stdin?.write(`${JSON.stringify(message)}\n`);
+  };
+
+  if (options.configuration !== undefined) {
+    write({
+      _tag: "configuration",
+      editorProtocolVersion: 1,
+      values: options.configuration,
+    });
+  }
+  write({
+    _tag: "document",
+    editorProtocolVersion: 1,
+    path: options.document?.path ?? join(tmpdir(), "preview-session.md"),
+    text: options.document?.text ?? "# Session\n\nBody text.\n",
+  });
+
+  let stderr = "";
+  child.stderr?.on("data", (chunk: Buffer) => {
+    stderr += chunk.toString();
+  });
+
+  const url = await new Promise<string>((resolveUrl, rejectUrl) => {
+    let buffer = "";
+    const timer = setTimeout(
+      () => rejectUrl(new Error(`no URL from editor: ${buffer}${stderr}`)),
+      60_000,
+    );
+    child.stdout?.on("data", (chunk: Buffer) => {
+      buffer += chunk.toString();
+      const match = /http:\/\/127\.0\.0\.1:\d+\/?/u.exec(buffer);
+      if (match?.[0] !== undefined) {
+        clearTimeout(timer);
+        resolveUrl(match[0].endsWith("/") ? match[0] : `${match[0]}/`);
+      }
+    });
+    child.on("exit", (code) => {
+      clearTimeout(timer);
+      rejectUrl(new Error(`editor exited with ${code}: ${buffer}${stderr}`));
+    });
+  });
+
+  return {
+    url,
+    write,
+    stop: async () => {
+      if (child.exitCode !== null || child.signalCode !== null) return;
+      child.stdin?.end();
+      child.kill();
+      await new Promise<void>((resolveStop) => {
+        child.once("exit", () => resolveStop());
+        setTimeout(resolveStop, 2_000);
+      });
+    },
+  };
+};

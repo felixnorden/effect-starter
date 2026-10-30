@@ -28,13 +28,27 @@ const handle = (line: string): void => {
   const trimmed = line.trim();
   if (trimmed === "") return;
 
-  let message: { readonly _tag?: string; readonly text?: string };
+  let message: {
+    readonly _tag?: string;
+    readonly text?: string;
+    readonly line?: number;
+    readonly fraction?: number;
+  };
   try {
-    message = JSON.parse(trimmed) as { readonly _tag?: string; readonly text?: string };
+    message = JSON.parse(trimmed) as {
+      readonly _tag?: string;
+      readonly text?: string;
+      readonly line?: number;
+      readonly fraction?: number;
+    };
   } catch {
     return;
   }
 
+  if (message._tag === "cursor") {
+    record({ cursor: { line: message.line ?? 0, fraction: message.fraction ?? 0 } });
+    return;
+  }
   if (message._tag !== "document") return;
 
   count += 1;

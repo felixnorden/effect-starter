@@ -26,10 +26,19 @@ type DocumentRecord = {
   readonly digest: string;
 };
 
+type CursorRecord = {
+  readonly cursor: {
+    readonly line: number;
+    readonly fraction: number;
+  };
+};
+
 type CloseRecord = {
   readonly closed: true;
   readonly count: number;
 };
+
+type Record = DocumentRecord | CursorRecord | CloseRecord;
 
 type DriverReport = {
   readonly phase: string;
@@ -54,7 +63,7 @@ type Run = {
   readonly name: string;
   readonly exit: number;
   readonly output: string;
-  readonly records: readonly (DocumentRecord | CloseRecord)[];
+  readonly records: readonly Record[];
   readonly report: DriverReport;
   readonly aliveAfterOvercap: boolean;
   readonly typingDigest?: string;
@@ -139,18 +148,18 @@ const encodeMsgpack = (value: unknown): Uint8Array => {
   return new Uint8Array(bytes);
 };
 
-const readRecords = (file: string): readonly (DocumentRecord | CloseRecord)[] => {
+const readRecords = (file: string): readonly Record[] => {
   let text: string;
   try {
     text = readFileSync(file, "utf8");
   } catch {
     return [];
   }
-  const values: (DocumentRecord | CloseRecord)[] = [];
+  const values: Record[] = [];
   for (const line of text.split("\n")) {
     if (line.trim() === "") continue;
     try {
-      values.push(JSON.parse(line) as DocumentRecord | CloseRecord);
+      values.push(JSON.parse(line) as Record);
     } catch {
       // A partial line while the stub writes; the caller retries.
     }
@@ -158,16 +167,15 @@ const readRecords = (file: string): readonly (DocumentRecord | CloseRecord)[] =>
   return values;
 };
 
-const documents = (records: readonly (DocumentRecord | CloseRecord)[]): readonly DocumentRecord[] =>
+const documents = (records: readonly Record[]): readonly DocumentRecord[] =>
   records.filter((entry): entry is DocumentRecord => "digest" in entry);
 
-const closed = (records: readonly (DocumentRecord | CloseRecord)[]): boolean =>
-  records.some((entry) => "closed" in entry);
+const cursors = (records: readonly Record[]): readonly CursorRecord[] =>
+  records.filter((entry): entry is CursorRecord => "cursor" in entry);
 
-const waitForClose = async (
-  file: string,
-  ms: number,
-): Promise<readonly (DocumentRecord | CloseRecord)[]> => {
+const closed = (records: readonly Record[]): boolean => records.some((entry) => "closed" in entry);
+
+const waitForClose = async (file: string, ms: number): Promise<readonly Record[]> => {
   const deadline = Date.now() + ms;
   while (Date.now() < deadline) {
     const records = readRecords(file);
@@ -318,11 +326,13 @@ const runOnce = async (name: string, phase: string, wipeCommand = "bdelete"): Pr
     counts.cursor = documents(readRecords(recordFile)).length - cursorStart;
 
     const unchangedStart = documents(readRecords(recordFile)).length;
+    const unchangedCursorStart = cursors(readRecords(recordFile)).length;
     command("normal! l");
     await Bun.sleep(60);
     await Bun.sleep(SETTLE_MS);
     report = await capture();
     counts.unchanged = documents(readRecords(recordFile)).length - unchangedStart;
+    counts.unchangedCursors = cursors(readRecords(recordFile)).length - unchangedCursorStart;
 
     const writeStart = documents(readRecords(recordFile)).length;
     lua("_G.mdv.bump('write')");
@@ -455,6 +465,7 @@ check(
 const openCount = run.report.phaseCounts.open ?? -1;
 const cursorCount = run.report.phaseCounts.cursor ?? -1;
 const unchangedCount = run.report.phaseCounts.unchanged ?? -1;
+const unchangedCursors = run.report.phaseCounts.unchangedCursors ?? -1;
 const writeCount = run.report.phaseCounts.write ?? -1;
 const typingCount = run.report.phaseCounts.insertTyping ?? -1;
 const leaveCount = run.report.phaseCounts.insertLeave ?? -1;
@@ -463,7 +474,7 @@ const finalCursorCount = run.report.phaseCounts.finalCursor ?? -1;
 const overCapCount = run.report.phaseCounts.overCap ?? -1;
 console.log(`phase open: ${openCount}`);
 console.log(`phase cursor: ${cursorCount}`);
-console.log(`phase unchanged: ${unchangedCount}`);
+console.log(`phase unchanged: ${unchangedCount} documents, ${unchangedCursors} cursors`);
 console.log(`phase write: ${writeCount}`);
 console.log(`phase insert-typing: ${typingCount}`);
 console.log(`phase insert-leave: ${leaveCount}`);
@@ -483,6 +494,10 @@ check(
   cursorCount >= 2 && cursorCount <= 5,
 );
 check(`the unchanged phase sent nothing (got ${unchangedCount})`, unchangedCount === 0);
+check(
+  `the unchanged phase sent exactly one cursor (got ${unchangedCursors})`,
+  unchangedCursors === 1,
+);
 check(
   `the write phase sent 1 to 2 documents (got ${writeCount})`,
   writeCount >= 1 && writeCount <= 2,

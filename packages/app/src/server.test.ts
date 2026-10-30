@@ -1,10 +1,17 @@
 // @effect-diagnostics unstableApiUsage:off
 // @effect-diagnostics asyncFunction:off
 // @effect-diagnostics strictEffectProvide:off
-import { decodeServerMessage, PROTOCOL_VERSION, type ServerMessage } from "@mdv/core/protocol";
+import {
+  decodeServerMessage,
+  PROTOCOL_VERSION,
+  type CursorMessage,
+  type ServerMessage,
+  type SessionMessage,
+} from "@mdv/core/protocol";
+import { stylesheetAddress } from "@mdv/core/config";
 import { NodeHttpServer } from "@effect/platform-node";
 import { Effect, Result, Stream } from "effect";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path, { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -46,7 +53,13 @@ const snapshotMessage: ServerMessage = {
   blocks: [],
 };
 
-const handle = (client: SpyClient, frame: string, snapshot: ServerMessage | null = null) =>
+const handle = (
+  client: SpyClient,
+  frame: string,
+  snapshot: ServerMessage | null = null,
+  session: SessionMessage | null = null,
+  cursor: CursorMessage | null = null,
+) =>
   Effect.runPromise(
     handleClientFrame(
       {
@@ -55,6 +68,8 @@ const handle = (client: SpyClient, frame: string, snapshot: ServerMessage | null
         title: "Kitchen Sink",
         fileName: "kitchen-sink.md",
         currentSnapshot: Effect.succeed(snapshot),
+        currentSession: Effect.succeed(session),
+        currentCursor: Effect.succeed(cursor),
       },
       frame,
     ),
@@ -73,6 +88,29 @@ describe("handleClientFrame", () => {
       title: "Kitchen Sink",
       fileName: "kitchen-sink.md",
     });
+  });
+
+  it("the session member follows every handshake", async () => {
+    const client = spyClient();
+    const session: SessionMessage = {
+      _tag: "session",
+      fileName: "kitchen-sink.md",
+      title: "Kitchen Sink",
+      showFileName: true,
+      width: "900px",
+      fontSize: "16px",
+      markdownCss: null,
+      codeCss: null,
+      scrollMode: "middle",
+      smoothScroll: true,
+      themeMode: "system",
+    };
+
+    await handle(client, `{"_tag":"hello","protocolVersion":${PROTOCOL_VERSION}}`, null, session);
+
+    const frames = decodedFrames(client);
+    expect(frames.map((frame) => frame._tag)).toEqual(["ready", "session"]);
+    expect(frames[1]).toEqual(session);
   });
 
   it("a hello with a different version answers error naming both versions, then closes", async () => {
@@ -104,6 +142,67 @@ describe("handleClientFrame", () => {
     await handle(client, `{"_tag":"requestSnapshot"}`, snapshotMessage);
 
     expect(decodedFrames(client)[0]).toEqual(snapshotMessage);
+  });
+
+  it("a snapshot is followed by the last cursor stamped with its seq", async () => {
+    const client = spyClient();
+    const snapshot: ServerMessage = { _tag: "snapshot", seq: 5, title: null, blocks: [] };
+    const cursor: CursorMessage = {
+      _tag: "cursor",
+      blockId: "b2" as CursorMessage["blockId"],
+      line: 7,
+      fraction: 0.5,
+      seq: 2,
+    };
+
+    await handle(client, `{"_tag":"requestSnapshot"}`, snapshot, null, cursor);
+
+    const frames = decodedFrames(client);
+    expect(frames.map((frame) => frame._tag)).toEqual(["snapshot", "cursor"]);
+    expect(frames[1]).toEqual({ ...cursor, seq: 5 });
+  });
+
+  it("a cursor sent since the snapshot is not replayed", async () => {
+    const client = spyClient();
+    const snapshot: ServerMessage = { _tag: "snapshot", seq: 5, title: null, blocks: [] };
+    const cursor: CursorMessage = {
+      _tag: "cursor",
+      blockId: "b2" as CursorMessage["blockId"],
+      line: 7,
+      fraction: 0.5,
+      seq: 5,
+    };
+
+    await handle(client, `{"_tag":"requestSnapshot"}`, snapshot, null, cursor);
+    await handle(client, `{"_tag":"requestSnapshot"}`, snapshot, null, cursor);
+
+    expect(decodedFrames(client).filter((frame) => frame._tag === "cursor")).toHaveLength(1);
+  });
+
+  it("an older cursor is replayed once", async () => {
+    const client = spyClient();
+    const snapshot: ServerMessage = { _tag: "snapshot", seq: 5, title: null, blocks: [] };
+    const cursor: CursorMessage = {
+      _tag: "cursor",
+      blockId: "b2" as CursorMessage["blockId"],
+      line: 7,
+      fraction: 0.5,
+      seq: 2,
+    };
+
+    await handle(client, `{"_tag":"requestSnapshot"}`, snapshot, null, cursor);
+
+    const cursors = decodedFrames(client).filter((frame) => frame._tag === "cursor");
+    expect(cursors).toHaveLength(1);
+    expect(cursors[0]?.seq).toBe(5);
+  });
+
+  it("a snapshot without a stored cursor sends nothing after it", async () => {
+    const client = spyClient();
+
+    await handle(client, `{"_tag":"requestSnapshot"}`, snapshotMessage);
+
+    expect(decodedFrames(client).map((frame) => frame._tag)).toEqual(["snapshot"]);
   });
 
   it("an ack is readiness only and answers nothing", async () => {
@@ -170,6 +269,9 @@ describe("startServer asset routes", () => {
           fileName: "a.md",
           title: null,
           currentSnapshot: Effect.succeed(null),
+          currentSession: Effect.succeed(null),
+          currentCursor: Effect.succeed(null),
+          stylesheets: Effect.succeed({ markdown: null, code: null }),
           updates: Stream.empty,
         });
         return yield* use(handle.url);
@@ -215,5 +317,82 @@ describe("startServer asset routes", () => {
     );
 
     expect(response.status).toBe(404);
+  });
+
+  const withStylesheet = <A>(
+    use: (url: string, address: string, dir: string) => Effect.Effect<A>,
+  ): Promise<A> => {
+    const clientDir = makeRoot();
+    writeFileSync(join(clientDir, "index.html"), "page");
+    const dir = makeRoot();
+    const file = join(dir, "custom.css");
+    writeFileSync(file, ".custom { color: red }");
+    writeFileSync(join(dir, "sibling.css"), ".sibling { color: blue }");
+    const address = stylesheetAddress("markdown", new Uint8Array(readFileSync(file)));
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const handle = yield* startServer({
+          clientDir,
+          localRoot: null,
+          imageRoot: null,
+          fileName: "a.md",
+          title: null,
+          currentSnapshot: Effect.succeed(null),
+          currentSession: Effect.succeed(null),
+          currentCursor: Effect.succeed(null),
+          stylesheets: Effect.succeed({ markdown: { path: file }, code: null }),
+          updates: Stream.empty,
+        });
+        return yield* use(handle.url, address, dir);
+      }).pipe(Effect.provide(NodeHttpServer.layerTest)),
+    );
+  };
+
+  it("serves the configured markdown stylesheet by slot and nothing beside it", async () => {
+    const result = await withStylesheet((url, address, dir) =>
+      Effect.gen(function* () {
+        const served = yield* Effect.promise(() => fetch(new URL(address, url)));
+        const sibling = yield* Effect.promise(() =>
+          fetch(
+            new URL(
+              stylesheetAddress("markdown", new Uint8Array(readFileSync(join(dir, "sibling.css")))),
+              url,
+            ),
+          ),
+        );
+        const madeUpSlot = yield* Effect.promise(() =>
+          fetch(new URL("/stylesheet/other/aaaaaaaaaaaaaaaa", url)),
+        );
+        const traversal = yield* Effect.promise(() =>
+          fetch(new URL("/stylesheet/markdown/../x", url)),
+        );
+        return {
+          status: served.status,
+          body: yield* Effect.promise(() => served.text()),
+          cache: served.headers.get("cache-control"),
+          type: served.headers.get("content-type"),
+          sibling: sibling.status,
+          madeUpSlot: madeUpSlot.status,
+          traversal: traversal.status,
+        };
+      }),
+    );
+
+    expect(result.status).toBe(200);
+    expect(result.body).toBe(".custom { color: red }");
+    expect(result.cache).toBe("no-store");
+    expect(result.type).toBe("text/css; charset=utf-8");
+    expect(result.sibling).toBe(404);
+    expect(result.madeUpSlot).toBe(404);
+    expect([403, 404]).toContain(result.traversal);
+  });
+
+  it("answers 404 for a stale address of the same slot", async () => {
+    const stale = await withStylesheet((url) =>
+      Effect.promise(() => fetch(new URL("/stylesheet/markdown/0000000000000000", url))),
+    );
+
+    expect(stale.status).toBe(404);
   });
 });

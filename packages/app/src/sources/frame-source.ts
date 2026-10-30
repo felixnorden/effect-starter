@@ -14,9 +14,9 @@ type RootState = {
 
 export type FrameSource = {
   readonly deps: PreviewSessionDeps;
-  /** One push per document frame. Identical text pushes nothing. */
-  readonly push: (document: DocumentMessage) => Effect.Effect<void>;
-  /** Fixed at the first document's path; `null` when that path is empty. */
+  /** One push per document frame. Identical text pushes nothing unless forced. */
+  readonly push: (document: DocumentMessage, force?: boolean) => Effect.Effect<void>;
+  /** Follows the last push's path; `null` when that path is empty. */
   readonly localRoot: Effect.Effect<string | null>;
 };
 
@@ -46,23 +46,19 @@ export const createFrameSource = (options: {
       render: options.render,
     };
 
-    const push = (document: DocumentMessage): Effect.Effect<void> =>
+    const push = (document: DocumentMessage, force = false): Effect.Effect<void> =>
       Effect.gen(function* () {
         const contentHash = hashSource(document.text);
+        yield* Ref.set(root, {
+          set: true,
+          dir: document.path === "" ? null : dirname(document.path),
+        });
         const previous = yield* Ref.get(snapshot);
-        if (previous !== null && previous.contentHash === contentHash) return;
+        if (!force && previous !== null && previous.contentHash === contentHash) return;
 
         const next = { source: document.text, contentHash };
         yield* Ref.set(snapshot, next);
         yield* Queue.offer(events, { _tag: "source", snapshot: next });
-
-        const currentRoot = yield* Ref.get(root);
-        if (!currentRoot.set) {
-          yield* Ref.set(root, {
-            set: true,
-            dir: document.path === "" ? null : dirname(document.path),
-          });
-        }
       });
 
     return { deps, push, localRoot: Ref.get(root).pipe(Effect.map((state) => state.dir)) };

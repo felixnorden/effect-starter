@@ -16,12 +16,17 @@ export type ThemeDeps = {
 
 const isTheme = (value: string | null): value is Theme => value === "light" || value === "dark";
 
-/** A stored manual choice wins; otherwise the system preference decides. */
-export const resolveTheme = (deps: ThemeDeps): Theme => {
-  const stored = deps.storage.getItem(THEME_KEY);
-  if (isTheme(stored)) return stored;
-  return deps.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+export const readStoredTheme = (storage: Storage): Theme | null => {
+  const stored = storage.getItem(THEME_KEY);
+  return isTheme(stored) ? stored : null;
 };
+
+export const systemTheme = (deps: Pick<ThemeDeps, "matchMedia">): Theme =>
+  deps.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+
+/** A stored manual choice wins; otherwise the system preference decides. */
+export const resolveTheme = (deps: ThemeDeps): Theme =>
+  readStoredTheme(deps.storage) ?? systemTheme(deps);
 
 /** Persist a manual choice for the page session. */
 export const setTheme = (theme: Theme, deps: Pick<ThemeDeps, "storage">): Theme => {

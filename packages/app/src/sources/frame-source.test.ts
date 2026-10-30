@@ -113,14 +113,14 @@ describe("createFrameSource", () => {
     }),
   );
 
-  it.effect("keeps the first document's local root when a later path differs", () =>
+  it.effect("a rebound document moves the local root", () =>
     Effect.gen(function* () {
       const source = yield* createFrameSource({ render: (text) => Effect.succeed(modelOf(text)) });
 
       yield* source.push(documentOf("# one\n", "/docs/a.md"));
       yield* source.push(documentOf("# two\n", "/other/b.md"));
 
-      expect(yield* source.localRoot).toBe("/docs");
+      expect(yield* source.localRoot).toBe("/other");
     }),
   );
 });

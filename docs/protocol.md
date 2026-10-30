@@ -3,24 +3,48 @@
 The preview server and the page exchange JSON frames over one WebSocket at
 `/ws` on the same loopback origin. `PROTOCOL_VERSION` in
 `packages/core/src/protocol.ts` is `1`. Every message has one conformance test
-and one golden encoded frame, so a schema edit without a version bump fails the
-suite.
+and one golden encoded frame; the version rule below separates an additive
+change from a breaking one.
 
 ## Messages
 
-| Direction | `_tag`            | Fields                                                        |
-| --------- | ----------------- | ------------------------------------------------------------- |
-| client→   | `hello`           | `protocolVersion`                                             |
-| client→   | `ack`             | none. Readiness only; it triggers nothing.                    |
-| client→   | `requestSnapshot` | none. The only snapshot trigger, sent on mount and on reload. |
-| server→   | `ready`           | `protocolVersion`, `title`, `fileName`                        |
-| server→   | `snapshot`        | `seq`, `title`, `blocks`                                      |
-| server→   | `patch`           | `seq`, `title`, optional `order`, `upserts`, `removed`        |
-| server→   | `error`           | `stage`, `message`                                            |
+| Direction | `_tag`            | Fields                                                                                                                        |
+| --------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| client→   | `hello`           | `protocolVersion`                                                                                                             |
+| client→   | `ack`             | none. Readiness only; it triggers nothing.                                                                                    |
+| client→   | `requestSnapshot` | none. The only snapshot trigger, sent on mount and on reload.                                                                 |
+| server→   | `ready`           | `protocolVersion`, `title`, `fileName`                                                                                        |
+| server→   | `snapshot`        | `seq`, `title`, `blocks`                                                                                                      |
+| server→   | `patch`           | `seq`, `title`, optional `order`, `upserts`, `removed`                                                                        |
+| server→   | `error`           | `stage`, `message`                                                                                                            |
+| server→   | `session`         | `fileName`, `title`, `showFileName`, `width`, `fontSize`, `markdownCss`, `codeCss`, `scrollMode`, `smoothScroll`, `themeMode` |
+| server→   | `cursor`          | `blockId`, `line`, `fraction`, `seq`                                                                                          |
 
 A `WireBlock` is `{ id, hash, kind, range, hast }`. `hast` is an unknown
 envelope field: the server sends a tree it just built, and the page guards the
 shape on arrival.
+
+`session` and `cursor` are server-to-page only. `session` carries the live file
+name, title, header visibility, width, font size, the two configured stylesheet
+addresses, the scroll mode and smooth flag, and the configured theme mode. It
+carries no sequence. `cursor.seq` is the document sequence the cursor resolved
+against; the page handles both members before its document stale-sequence guard,
+and drops a cursor only when `seq` is older than the newest applied document.
+
+## Version rule
+
+```version-rule
+Additive changes keep the version at 1 and must be listed in the same commit:
+- a new message member
+- a new message tag
+- a new literal value in a closed set
+
+Breaking changes require a version bump:
+- a renamed field
+- a retyped field
+- a removed field
+- a moved golden byte
+```
 
 ## Version and handshake
 
@@ -62,7 +86,10 @@ ranges requests a snapshot. No payload carries a full range map.
 ## File name
 
 `ready` carries `fileName`: the display basename the app supplies, because the
-app is the only layer that sees a path. `snapshot` and `patch` do not carry it;
-the name cannot change while a session exists. The `title` stays on `ready`,
-`snapshot`, and `patch`. The page renders the file name as text, never as
-Markdown.
+app is the only layer that sees a path. `snapshot` and `patch` do not carry it.
+The `title` stays on `ready`, `snapshot`, and `patch`. The page renders the file
+name as text, never as Markdown.
+
+A later `session` member carries the live name and title. It supersedes `ready`'s
+values without changing `ready`'s bytes: `ready` keeps its first name, and the
+session member follows the member whose text the page shows.

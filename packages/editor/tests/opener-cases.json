@@ -1,0 +1,193 @@
+{
+  "cases": [
+    {
+      "name": "the default form opens the address and opens one page",
+      "events": [
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        }
+      ],
+      "expect": {
+        "rows": [1],
+        "opened": 1,
+        "closed": 0
+      }
+    },
+    {
+      "name": "the user-function form calls the named function with the address",
+      "events": [
+        {
+          "_tag": "config",
+          "values": {
+            "browser.open_function": {
+              "value": "MyOpen",
+              "source": "setup:browser.open_function"
+            }
+          }
+        },
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        }
+      ],
+      "expect": {
+        "rows": [1],
+        "opened": 1,
+        "closed": 0
+      }
+    },
+    {
+      "name": "the echo form writes the address and opens nothing",
+      "events": [
+        {
+          "_tag": "config",
+          "values": {
+            "server.echo_url": {
+              "value": true,
+              "source": "setup:server.echo_url"
+            }
+          }
+        },
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        }
+      ],
+      "expect": {
+        "rows": [1],
+        "opened": 0,
+        "closed": 0,
+        "notifications": ["http://127.0.0.1:1/"]
+      }
+    },
+    {
+      "name": "the named-browser form opens once",
+      "events": [
+        {
+          "_tag": "config",
+          "values": {
+            "browser.name": {
+              "value": "firefox",
+              "source": "setup:browser.name"
+            }
+          }
+        },
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        }
+      ],
+      "expect": {
+        "rows": [1],
+        "opened": 1,
+        "closed": 0
+      }
+    },
+    {
+      "name": "a non-loopback host is refused before a process exists",
+      "events": [
+        {
+          "_tag": "config",
+          "values": {
+            "server.open_ip": {
+              "value": "0.0.0.0",
+              "source": "setup:server.open_ip"
+            }
+          }
+        },
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        }
+      ],
+      "expect": {
+        "rows": [],
+        "opened": 0,
+        "closed": 0,
+        "jobs": 0,
+        "notifications": ["PT-5", "0.0.0.0"]
+      }
+    },
+    {
+      "name": "a sibling holding the configured port gets port 0",
+      "events": [
+        {
+          "_tag": "config",
+          "values": {
+            "server.port": {
+              "value": 3000,
+              "source": "setup:server.port"
+            }
+          }
+        },
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "start",
+          "buf": 2,
+          "path": "/tmp/b.md",
+          "text": "# B\n"
+        }
+      ],
+      "expect": {
+        "rows": [1, 2],
+        "opened": 2,
+        "closed": 0,
+        "ports": {
+          "1": "3000",
+          "2": "0"
+        }
+      }
+    },
+    {
+      "name": "a foreign port holder keeps the bind failure and no silent fallback",
+      "events": [
+        {
+          "_tag": "config",
+          "values": {
+            "server.port": {
+              "value": 3000,
+              "source": "setup:server.port"
+            }
+          }
+        },
+        {
+          "_tag": "start",
+          "buf": 1,
+          "path": "/tmp/a.md",
+          "text": "# A\n"
+        },
+        {
+          "_tag": "exit",
+          "job": 1,
+          "code": 1
+        }
+      ],
+      "expect": {
+        "rows": [],
+        "opened": 0,
+        "closed": 0,
+        "ports": {
+          "1": "3000"
+        },
+        "notifications": ["exited", "Log:"]
+      },
+      "ready": false
+    }
+  ]
+}

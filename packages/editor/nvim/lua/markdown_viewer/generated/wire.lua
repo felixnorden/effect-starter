@@ -5,8 +5,8 @@ M.editor_protocol_version = 1
 M.max_frame_bytes = 67108864
 M.frame_terminator = 10
 
-M.tags = { "document", "ready", "error" }
-M.stages = { "bind", "protocol", "render", "client" }
+M.tags = { "document", "ready", "error", "configuration", "cursor" }
+M.stages = { "bind", "protocol", "render", "client", "config" }
 
 M.messages = {
   document = {
@@ -20,6 +20,14 @@ M.messages = {
   error = {
     required = { "_tag", "editorProtocolVersion", "stage", "message" },
     optional = { "clientVersion", "serverVersion" },
+  },
+  configuration = {
+    required = { "_tag", "editorProtocolVersion", "values" },
+    optional = {},
+  },
+  cursor = {
+    required = { "_tag", "editorProtocolVersion", "line", "fraction" },
+    optional = {},
   },
 }
 
@@ -44,11 +52,22 @@ M.field_types = {
     clientVersion = "number",
     serverVersion = "number",
   },
+  configuration = {
+    _tag = "string",
+    editorProtocolVersion = "number",
+    values = "json",
+  },
+  cursor = {
+    _tag = "string",
+    editorProtocolVersion = "number",
+    line = "number",
+    fraction = "number",
+  },
 }
 
 M.field_values = {
   error = {
-    stage = { "bind", "protocol", "render", "client" },
+    stage = { "bind", "protocol", "render", "client", "config" },
   },
 }
 

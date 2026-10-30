@@ -1,6 +1,8 @@
 export type Client = {
   readonly send: (frame: string) => void;
   readonly close: () => void;
+  /** The last snapshot served on this connection; `undefined` before the first. */
+  lastSnapshotSeq?: number;
 };
 
 export type ClientHub = {

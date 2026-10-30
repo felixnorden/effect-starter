@@ -51,6 +51,7 @@ local mdv = {
 
 function mdv.open()
   vim.cmd("edit " .. vim.fn.fnameescape(fixture))
+  vim.bo.filetype = "markdown"
   vim.cmd("MarkdownPreview")
 end
 
@@ -106,8 +107,15 @@ function mdv.check_overcap()
 end
 
 function mdv.check_augroup()
-  local ok, autocmds = pcall(vim.api.nvim_get_autocmds, { group = "markdown_viewer_refresh" })
-  local count = ok and #autocmds or 0
+  local ok, autocmds = pcall(vim.api.nvim_get_autocmds, {})
+  local count = 0
+  if ok then
+    for _, entry in ipairs(autocmds) do
+      if vim.startswith(entry.group_name or "", "markdown_viewer_refresh") then
+        count = count + 1
+      end
+    end
+  end
   report.augroupCount = count
   report.augroupEmpty = count == 0
   report.augroupBeforeQuit = count > 0

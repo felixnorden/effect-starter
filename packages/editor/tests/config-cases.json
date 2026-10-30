@@ -1,0 +1,386 @@
+{
+  "cases": [
+    {
+      "name": "defaults",
+      "settings": {},
+      "expect": {
+        "values": {},
+        "sources": {},
+        "warnings": 0
+      }
+    },
+    {
+      "name": "every key in its new spelling",
+      "settings": {
+        "g": {
+          "markdown_viewer_assets_allow_remote": false,
+          "markdown_viewer_assets_allowlist": ["/a.css"],
+          "markdown_viewer_images_path": "/images",
+          "markdown_viewer_browser": "firefox",
+          "markdown_viewer_browserfunc": {
+            "name": "open"
+          },
+          "markdown_viewer_export_footer": true,
+          "markdown_viewer_export_format": "html",
+          "markdown_viewer_export_header": false,
+          "markdown_viewer_export_margins": "10mm",
+          "markdown_viewer_export_page_size": "Letter",
+          "markdown_viewer_export_toc": true,
+          "markdown_viewer_logging_level": "info",
+          "markdown_viewer_auto_close": false,
+          "markdown_viewer_auto_start": true,
+          "markdown_viewer_combine_preview": true,
+          "markdown_viewer_combine_preview_auto_refresh": false,
+          "markdown_viewer_command_for_global": true,
+          "markdown_viewer_content_editable": true,
+          "markdown_viewer_filetypes": ["markdown", "md"],
+          "markdown_viewer_preview_font_size": "18px",
+          "markdown_viewer_page_title": "\u300c${name}\u300d!",
+          "markdown_viewer_refresh_slow": true,
+          "markdown_viewer_disable_filename": true,
+          "markdown_viewer_preview_width": "1000px",
+          "markdown_viewer_flowchart_diagrams": {
+            "a": 1
+          },
+          "markdown_viewer_hide_yaml_meta": false,
+          "markdown_viewer_katex": {
+            "b": 2
+          },
+          "markdown_viewer_mkit": {
+            "breaks": true
+          },
+          "markdown_viewer_maid": {
+            "c": 3
+          },
+          "markdown_viewer_uml": {
+            "d": 4
+          },
+          "markdown_viewer_sequence_diagrams": {
+            "e": 5
+          },
+          "markdown_viewer_toc": {
+            "f": 6
+          },
+          "markdown_viewer_disable_sync_scroll": true,
+          "markdown_viewer_sync_scroll_type": "top",
+          "markdown_viewer_scroll_smooth": false,
+          "markdown_viewer_security_allow_html": false,
+          "markdown_viewer_echo_preview_url": true,
+          "markdown_viewer_open_ip": "127.0.0.1",
+          "markdown_viewer_open_to_the_world": true,
+          "markdown_viewer_port": 3210,
+          "markdown_viewer_highlight_css": "/code.css",
+          "markdown_viewer_theme_code_dark": "dark-plus",
+          "markdown_viewer_theme_code_light": "light-plus",
+          "markdown_viewer_markdown_css": "/markdown.css",
+          "markdown_viewer_theme": "dark",
+          "markdown_viewer_theme_print": "dark"
+        }
+      },
+      "expect": {
+        "values": {
+          "assets.allow_remote": false,
+          "assets.allowlist": ["/a.css"],
+          "assets.image_root": "/images",
+          "browser.name": "firefox",
+          "browser.open_function": {
+            "name": "open"
+          },
+          "export.footer": true,
+          "export.format": "html",
+          "export.header": false,
+          "export.margins": "10mm",
+          "export.page_size": "Letter",
+          "export.toc": true,
+          "logging.level": "info",
+          "preview.auto_close": false,
+          "preview.auto_start": true,
+          "preview.combine": true,
+          "preview.combine_auto_refresh": false,
+          "preview.command_for_global": true,
+          "preview.content_editable": true,
+          "preview.filetypes": ["markdown", "md"],
+          "preview.font_size": "18px",
+          "preview.page_title": "\u300c${name}\u300d!",
+          "preview.refresh_slow": true,
+          "preview.show_filename": false,
+          "preview.width": "1000px",
+          "render.flowchart": {
+            "a": 1
+          },
+          "render.hide_front_matter": false,
+          "render.katex": {
+            "b": 2
+          },
+          "render.markdown_it": {
+            "breaks": true
+          },
+          "render.mermaid": {
+            "c": 3
+          },
+          "render.plantuml": {
+            "d": 4
+          },
+          "render.sequence_diagrams": {
+            "e": 5
+          },
+          "render.toc": {
+            "f": 6
+          },
+          "scroll.enabled": false,
+          "scroll.mode": "top",
+          "scroll.smooth": false,
+          "security.allow_html": false,
+          "server.echo_url": true,
+          "server.open_ip": "127.0.0.1",
+          "server.open_to_the_world": true,
+          "server.port": 3210,
+          "theme.code_css": "/code.css",
+          "theme.code_dark": "dark-plus",
+          "theme.code_light": "light-plus",
+          "theme.markdown_css": "/markdown.css",
+          "theme.mode": "dark",
+          "theme.print": "dark"
+        },
+        "sources": {
+          "assets.allow_remote": "g:markdown_viewer_assets_allow_remote",
+          "assets.allowlist": "g:markdown_viewer_assets_allowlist",
+          "assets.image_root": "g:markdown_viewer_images_path",
+          "browser.name": "g:markdown_viewer_browser",
+          "browser.open_function": "g:markdown_viewer_browserfunc",
+          "export.footer": "g:markdown_viewer_export_footer",
+          "export.format": "g:markdown_viewer_export_format",
+          "export.header": "g:markdown_viewer_export_header",
+          "export.margins": "g:markdown_viewer_export_margins",
+          "export.page_size": "g:markdown_viewer_export_page_size",
+          "export.toc": "g:markdown_viewer_export_toc",
+          "logging.level": "g:markdown_viewer_logging_level",
+          "preview.auto_close": "g:markdown_viewer_auto_close",
+          "preview.auto_start": "g:markdown_viewer_auto_start",
+          "preview.combine": "g:markdown_viewer_combine_preview",
+          "preview.combine_auto_refresh": "g:markdown_viewer_combine_preview_auto_refresh",
+          "preview.command_for_global": "g:markdown_viewer_command_for_global",
+          "preview.content_editable": "g:markdown_viewer_content_editable",
+          "preview.filetypes": "g:markdown_viewer_filetypes",
+          "preview.font_size": "g:markdown_viewer_preview_font_size",
+          "preview.page_title": "g:markdown_viewer_page_title",
+          "preview.refresh_slow": "g:markdown_viewer_refresh_slow",
+          "preview.show_filename": "g:markdown_viewer_disable_filename",
+          "preview.width": "g:markdown_viewer_preview_width",
+          "render.flowchart": "g:markdown_viewer_flowchart_diagrams",
+          "render.hide_front_matter": "g:markdown_viewer_hide_yaml_meta",
+          "render.katex": "g:markdown_viewer_katex",
+          "render.markdown_it": "g:markdown_viewer_mkit",
+          "render.mermaid": "g:markdown_viewer_maid",
+          "render.plantuml": "g:markdown_viewer_uml",
+          "render.sequence_diagrams": "g:markdown_viewer_sequence_diagrams",
+          "render.toc": "g:markdown_viewer_toc",
+          "scroll.enabled": "g:markdown_viewer_disable_sync_scroll",
+          "scroll.mode": "g:markdown_viewer_sync_scroll_type",
+          "scroll.smooth": "g:markdown_viewer_scroll_smooth",
+          "security.allow_html": "g:markdown_viewer_security_allow_html",
+          "server.echo_url": "g:markdown_viewer_echo_preview_url",
+          "server.open_ip": "g:markdown_viewer_open_ip",
+          "server.open_to_the_world": "g:markdown_viewer_open_to_the_world",
+          "server.port": "g:markdown_viewer_port",
+          "theme.code_css": "g:markdown_viewer_highlight_css",
+          "theme.code_dark": "g:markdown_viewer_theme_code_dark",
+          "theme.code_light": "g:markdown_viewer_theme_code_light",
+          "theme.markdown_css": "g:markdown_viewer_markdown_css",
+          "theme.mode": "g:markdown_viewer_theme",
+          "theme.print": "g:markdown_viewer_theme_print"
+        },
+        "warnings": 0
+      }
+    },
+    {
+      "name": "the setup table wins over both g: forms",
+      "editors": ["nvim"],
+      "settings": {
+        "nvim": {
+          "setup": {
+            "preview": {
+              "auto_start": true,
+              "width": "1200px"
+            }
+          }
+        },
+        "g": {
+          "markdown_viewer_auto_start": false,
+          "markdown_viewer_preview_width": "800px",
+          "mkdp_auto_start": false
+        }
+      },
+      "expect": {
+        "values": {
+          "preview.auto_start": true,
+          "preview.width": "1200px"
+        },
+        "sources": {
+          "nvim": {
+            "preview.auto_start": "setup:preview.auto_start",
+            "preview.width": "setup:preview.width"
+          }
+        },
+        "warnings": 0
+      }
+    },
+    {
+      "name": "the markdown_viewer form wins over the baseline",
+      "settings": {
+        "g": {
+          "markdown_viewer_auto_start": false,
+          "mkdp_auto_start": true
+        }
+      },
+      "expect": {
+        "values": {
+          "preview.auto_start": false
+        },
+        "sources": {
+          "preview.auto_start": "g:markdown_viewer_auto_start"
+        },
+        "warnings": 0
+      }
+    },
+    {
+      "name": "a baseline spelling resolves and warns once",
+      "settings": {
+        "g": {
+          "mkdp_auto_start": true
+        }
+      },
+      "expect": {
+        "values": {
+          "preview.auto_start": true
+        },
+        "sources": {
+          "preview.auto_start": "g:mkdp_auto_start"
+        },
+        "warnings": 1,
+        "messageContains": ["g:mkdp_auto_start", "g:markdown_viewer_auto_start", "deprecated"]
+      }
+    },
+    {
+      "name": "a nested baseline key maps to its dotted key",
+      "settings": {
+        "g": {
+          "mkdp_preview_options": {
+            "sync_scroll_type": "top"
+          }
+        }
+      },
+      "expect": {
+        "values": {
+          "scroll.mode": "top"
+        },
+        "sources": {
+          "scroll.mode": "g:mkdp_preview_options.sync_scroll_type"
+        },
+        "warnings": 1,
+        "messageContains": [
+          "g:mkdp_preview_options.sync_scroll_type",
+          "g:markdown_viewer_sync_scroll_type",
+          "deprecated"
+        ]
+      }
+    },
+    {
+      "name": "an unknown nested key warns and still resolves",
+      "settings": {
+        "g": {
+          "markdown_viewer_sync_scroll_type": "top",
+          "mkdp_preview_options": {
+            "invented": 1
+          }
+        }
+      },
+      "expect": {
+        "values": {
+          "scroll.mode": "top"
+        },
+        "sources": {
+          "scroll.mode": "g:markdown_viewer_sync_scroll_type"
+        },
+        "warnings": 1,
+        "messageContains": ["invented", "unknown"]
+      }
+    },
+    {
+      "name": "the container row carries no value",
+      "settings": {
+        "g": {}
+      },
+      "expect": {
+        "values": {},
+        "sources": {},
+        "warnings": 0,
+        "noValue": ["preview.options"]
+      }
+    },
+    {
+      "name": "an invalid enumeration reports all four fields",
+      "settings": {
+        "g": {
+          "mkdp_preview_options": {
+            "sync_scroll_type": "diagonal"
+          }
+        }
+      },
+      "expect": {
+        "values": {
+          "scroll.mode": "middle"
+        },
+        "sources": {
+          "scroll.mode": "default"
+        },
+        "warnings": 1,
+        "message": "invalid configuration: key scroll.mode, expected middle|top|relative, received diagonal, source g:mkdp_preview_options.sync_scroll_type",
+        "messageContains": [
+          "scroll.mode",
+          "middle|top|relative",
+          "diagonal",
+          "g:mkdp_preview_options.sync_scroll_type"
+        ]
+      }
+    },
+    {
+      "name": "the class split names five groups",
+      "settings": {
+        "g": {
+          "markdown_viewer_auto_start": true,
+          "markdown_viewer_port": 3001,
+          "markdown_viewer_mkit": {
+            "breaks": true
+          },
+          "markdown_viewer_preview_width": "950px",
+          "markdown_viewer_export_format": "html",
+          "markdown_viewer_theme": "light"
+        }
+      },
+      "expect": {
+        "values": {
+          "preview.auto_start": true,
+          "server.port": 3001,
+          "render.markdown_it": {
+            "breaks": true
+          },
+          "preview.width": "950px",
+          "export.format": "html",
+          "theme.mode": "light"
+        },
+        "sources": {
+          "preview.auto_start": "g:markdown_viewer_auto_start",
+          "server.port": "g:markdown_viewer_port",
+          "render.markdown_it": "g:markdown_viewer_mkit",
+          "preview.width": "g:markdown_viewer_preview_width",
+          "export.format": "g:markdown_viewer_export_format",
+          "theme.mode": "g:markdown_viewer_theme"
+        },
+        "warnings": 0
+      }
+    }
+  ],
+  "healthFieldOrder": ["discovery", "server", "package", "bun", "wire", "opener", "ports", "floor"],
+  "healthFixRule": "A failing field is followed by its own fix: line."
+}

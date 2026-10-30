@@ -1,7 +1,9 @@
 import type {
   BlockId,
+  CursorMessage,
   PatchMessage,
   ServerMessage,
+  SessionMessage,
   SnapshotMessage,
   WireBlock,
 } from "@mdv/core/protocol";
@@ -19,6 +21,10 @@ export type PreviewState = {
   readonly order: readonly BlockId[];
   readonly blocks: ReadonlyMap<BlockId, WireBlock>;
   readonly banner: Banner | null;
+  /** The newest display values; `null` until the session member arrives. */
+  readonly session: SessionMessage | null;
+  /** The newest resolved cursor; `null` until the editor sends one. */
+  readonly cursor: CursorMessage | null;
 };
 
 export const emptyPreviewState: PreviewState = {
@@ -28,6 +34,8 @@ export const emptyPreviewState: PreviewState = {
   order: [],
   blocks: new Map(),
   banner: null,
+  session: null,
+  cursor: null,
 };
 
 /**
@@ -39,6 +47,20 @@ export const applyServerMessage = (state: PreviewState, message: ServerMessage):
 
   if (message._tag === "error") {
     return { ...state, banner: { stage: message.stage, message: message.message } };
+  }
+
+  // Both branches sit before the document stale-seq guard (G-32).
+  if (message._tag === "session") {
+    return {
+      ...state,
+      session:
+        state.session === null
+          ? message
+          : { ...state.session, ...message, _tag: "session" as const },
+    };
+  }
+  if (message._tag === "cursor") {
+    return message.seq < state.lastSeq ? state : { ...state, cursor: message };
   }
 
   if (message.seq <= state.lastSeq) return state; // PT-3

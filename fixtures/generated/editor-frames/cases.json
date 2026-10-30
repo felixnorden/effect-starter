@@ -1,6 +1,38 @@
 {
   "cases": [
     {
+      "file": "configuration.frame",
+      "message": {
+        "_tag": "configuration",
+        "editorProtocolVersion": 1,
+        "values": [
+          {
+            "key": "preview.width",
+            "source": "setup:preview.width",
+            "value": "900px"
+          },
+          {
+            "key": "preview.auto_start",
+            "source": "g:mkdp_auto_start",
+            "value": true
+          }
+        ]
+      },
+      "name": "configuration",
+      "tag": "configuration"
+    },
+    {
+      "file": "cursor.frame",
+      "message": {
+        "_tag": "cursor",
+        "editorProtocolVersion": 1,
+        "fraction": 0.25,
+        "line": 12
+      },
+      "name": "cursor",
+      "tag": "cursor"
+    },
+    {
       "file": "document.frame",
       "message": {
         "_tag": "document",
@@ -60,6 +92,17 @@
   ],
   "editorProtocolVersion": 1,
   "fields": {
+    "configuration": [
+      "_tag",
+      "editorProtocolVersion",
+      "values"
+    ],
+    "cursor": [
+      "_tag",
+      "editorProtocolVersion",
+      "line",
+      "fraction"
+    ],
     "document": [
       "_tag",
       "editorProtocolVersion",
@@ -84,6 +127,8 @@
   "frameTerminator": 10,
   "maxFrameBytes": 67108864,
   "optionalFields": {
+    "configuration": [],
+    "cursor": [],
     "document": [],
     "error": [
       "clientVersion",
@@ -95,12 +140,15 @@
     "bind",
     "protocol",
     "render",
-    "client"
+    "client",
+    "config"
   ],
   "tags": [
     "document",
     "ready",
-    "error"
+    "error",
+    "configuration",
+    "cursor"
   ],
   "versionMismatch": {
     "clientVersion": 2,

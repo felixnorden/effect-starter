@@ -11,6 +11,7 @@ import {
   type EditorMessage,
 } from "./editor-protocol.ts";
 import { PROTOCOL_VERSION, decodeServerMessage, encodeServerMessage } from "./protocol.ts";
+import { additiveViolations } from "./protocol-baseline.ts";
 
 const casesPath = fileURLToPath(
   new URL("../../../fixtures/generated/editor-frames/cases.json", import.meta.url),
@@ -59,9 +60,23 @@ const fixtures: Readonly<Record<string, EditorMessage>> = {
     stage: "protocol",
     message: "invalid editor frame",
   },
+  configuration: {
+    _tag: "configuration",
+    editorProtocolVersion: EDITOR_PROTOCOL_VERSION,
+    values: [
+      { key: "preview.width", source: "setup:preview.width", value: "900px" },
+      { key: "preview.auto_start", source: "g:mkdp_auto_start", value: true },
+    ],
+  },
+  cursor: {
+    _tag: "cursor",
+    editorProtocolVersion: EDITOR_PROTOCOL_VERSION,
+    line: 12,
+    fraction: 0.25,
+  },
 };
 
-/** One hand-written table: a schema edit fails here even after a regenerate. */
+/** The pinned baseline: a rename, a retype, a reorder, or a removal fails. */
 const pinned = {
   version: 1,
   tags: ["document", "ready", "error"],
@@ -76,6 +91,20 @@ const pinned = {
     error: ["clientVersion", "serverVersion"],
   },
   stages: ["bind", "protocol", "render", "client"],
+} as const;
+
+/** Every schema addition must be listed here in the same commit, at version 1. */
+const ADDITIVE = {
+  tags: ["configuration", "cursor"],
+  fields: {
+    configuration: ["_tag", "editorProtocolVersion", "values"],
+    cursor: ["_tag", "editorProtocolVersion", "line", "fraction"],
+  },
+  optionalFields: {
+    configuration: [],
+    cursor: [],
+  },
+  stages: ["config"],
 } as const;
 
 type MessageShape = {
@@ -114,6 +143,21 @@ const withVersion = (message: EditorMessage, version: number): string => {
   return JSON.stringify(payload);
 };
 
+const stageValues = (): readonly string[] => {
+  for (const shape of shapes()) {
+    if (shape.tag !== "error") continue;
+    const ast = EditorMessageSchema.ast;
+    if (!SchemaAST.isUnion(ast)) continue;
+    for (const member of ast.types) {
+      if (!SchemaAST.isObjects(member)) continue;
+      const stage = member.propertySignatures.find((property) => property.name === "stage");
+      if (stage === undefined || !SchemaAST.isUnion(stage.type)) continue;
+      return stage.type.types.map((lit) => String(literalValue(lit)));
+    }
+  }
+  return [];
+};
+
 describe("editor protocol", () => {
   it("round-trips every message in the set, including an empty path", () => {
     for (const [name, message] of Object.entries(fixtures)) {
@@ -122,8 +166,8 @@ describe("editor protocol", () => {
 
     const document = decode(encodeEditorMessage(documentFixture));
     expect(document._tag === "document" ? document.path : null).toBe("");
-    expect(Object.keys(fixtures)).toHaveLength(3);
-    expect(new Set(Object.values(fixtures).map((message) => message._tag)).size).toBe(3);
+    expect(Object.keys(fixtures)).toHaveLength(5);
+    expect(new Set(Object.values(fixtures).map((message) => message._tag)).size).toBe(5);
   });
 
   it("reports both versions when the payload version differs", () => {
@@ -166,42 +210,59 @@ describe("editor protocol", () => {
 
   it("pins the tag, field, and version table against a regenerate", () => {
     const committed = manifest();
+    const schemaShapes = shapes();
 
     expect(EDITOR_PROTOCOL_VERSION).toBe(pinned.version);
     expect(committed.editorProtocolVersion).toBe(pinned.version);
-    expect(new Set(committed.tags)).toEqual(new Set(pinned.tags));
-    expect(new Set(committed.stages)).toEqual(new Set(pinned.stages));
+    expect(additiveViolations(pinned, ADDITIVE, schemaShapes, stageValues())).toEqual([]);
+    expect(additiveViolations(pinned, ADDITIVE, schemaShapes, committed.stages)).toEqual([]);
 
-    const schemaShapes = shapes();
-    expect(new Set(schemaShapes.map((shape) => shape.tag))).toEqual(new Set(pinned.tags));
+    const expectedTags = new Set([...pinned.tags, ...ADDITIVE.tags]);
+    expect(new Set(committed.tags)).toEqual(expectedTags);
+    expect(new Set(schemaShapes.map((shape) => shape.tag))).toEqual(expectedTags);
+    expect(new Set(committed.cases.map((entry) => entry.tag))).toEqual(expectedTags);
 
     for (const shape of schemaShapes) {
-      expect(shape.fields, shape.tag).toEqual(
-        pinned.fields[shape.tag as keyof typeof pinned.fields],
-      );
-      expect(shape.optionalFields, shape.tag).toEqual(
-        pinned.optionalFields[shape.tag as keyof typeof pinned.optionalFields],
-      );
-      expect(committed.fields[shape.tag], shape.tag).toEqual(
-        pinned.fields[shape.tag as keyof typeof pinned.fields],
-      );
-      expect(committed.optionalFields[shape.tag], shape.tag).toEqual(
-        pinned.optionalFields[shape.tag as keyof typeof pinned.optionalFields],
-      );
+      const expected = (pinned.tags as readonly string[]).includes(shape.tag)
+        ? pinned.fields[shape.tag as keyof typeof pinned.fields]
+        : ADDITIVE.fields[shape.tag as keyof typeof ADDITIVE.fields];
+      expect(shape.fields, shape.tag).toEqual(expected);
+      expect(committed.fields[shape.tag], shape.tag).toEqual(expected);
     }
+  });
 
-    expect(new Set(committed.cases.map((entry) => entry.tag))).toEqual(new Set(pinned.tags));
+  it("fails a breaking baseline edit and an unlisted additive field", () => {
+    const schemaShapes = shapes();
+
+    const renamed = structuredClone(ADDITIVE) as unknown as {
+      tags: string[];
+      fields: Record<string, string[]>;
+      optionalFields: Record<string, string[]>;
+      stages: string[];
+    };
+    renamed.fields.cursor = ["_tag", "editorProtocolVersion", "cursorLine", "fraction"];
+    expect(additiveViolations(pinned, renamed, schemaShapes, stageValues())).toHaveLength(1);
+
+    const baseline = structuredClone(pinned) as unknown as {
+      version: number;
+      tags: string[];
+      fields: Record<string, string[]>;
+      optionalFields: Record<string, string[]>;
+      stages: string[];
+    };
+    baseline.fields.document = ["_tag", "editorProtocolVersion", "content", "text"];
+    expect(additiveViolations(baseline, ADDITIVE, schemaShapes, stageValues())).toHaveLength(1);
   });
 
   it("accepts each closed stage value and rejects an unknown one", () => {
-    const stages = ["bind", "protocol", "render", "client"];
+    const stages = ["bind", "protocol", "render", "client", "config"];
 
     for (const stage of stages) {
       const message = decode(
         encodeEditorMessage({
           _tag: "error",
           editorProtocolVersion: EDITOR_PROTOCOL_VERSION,
-          stage: stage as "bind" | "protocol" | "render" | "client",
+          stage: stage as "bind" | "protocol" | "render" | "client" | "config",
           message: stage,
         }),
       );

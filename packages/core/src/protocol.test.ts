@@ -1,8 +1,10 @@
 import { Result } from "effect";
+import { SchemaAST } from "effect";
 import { describe, expect, it } from "vitest";
 
 import {
   PROTOCOL_VERSION,
+  ServerMessageSchema,
   decodeClientMessage,
   decodeServerMessage,
   encodeClientMessage,
@@ -11,6 +13,7 @@ import {
   type ServerMessage,
   type WireBlock,
 } from "./protocol.ts";
+import { additiveViolations, type WireShape } from "./protocol-baseline.ts";
 
 const block: WireBlock = {
   id: "b1" as WireBlock["id"],
@@ -44,6 +47,26 @@ const serverFixtures: Record<string, ServerMessage> = {
     removed: [],
   },
   error: { _tag: "error", stage: "protocol", message: "bad frame" },
+  session: {
+    _tag: "session",
+    fileName: "kitchen-sink.md",
+    title: "Kitchen Sink",
+    showFileName: true,
+    width: "900px",
+    fontSize: "16px",
+    markdownCss: null,
+    codeCss: null,
+    scrollMode: "middle",
+    smoothScroll: true,
+    themeMode: "system",
+  },
+  cursor: {
+    _tag: "cursor",
+    blockId: "b1" as WireBlock["id"],
+    line: 7,
+    fraction: 0.5,
+    seq: 3,
+  },
 };
 
 const clientFixtures: Record<string, ClientMessage> = {
@@ -61,6 +84,8 @@ const GOLDEN = {
   hello: `{"_tag":"hello","protocolVersion":1}`,
   ack: `{"_tag":"ack"}`,
   requestSnapshot: `{"_tag":"requestSnapshot"}`,
+  session: `{"_tag":"session","fileName":"kitchen-sink.md","title":"Kitchen Sink","showFileName":true,"width":"900px","fontSize":"16px","markdownCss":null,"codeCss":null,"scrollMode":"middle","smoothScroll":true,"themeMode":"system"}`,
+  cursor: `{"_tag":"cursor","blockId":"b1","line":7,"fraction":0.5,"seq":3}`,
 } as const;
 
 const decodeServer = (frame: string): ServerMessage => {
@@ -103,6 +128,8 @@ describe("protocol", () => {
     expect(encodeClientMessage(clientFixtures.hello!)).toBe(GOLDEN.hello);
     expect(encodeClientMessage(clientFixtures.ack!)).toBe(GOLDEN.ack);
     expect(encodeClientMessage(clientFixtures.requestSnapshot!)).toBe(GOLDEN.requestSnapshot);
+    expect(encodeServerMessage(serverFixtures.session!)).toBe(GOLDEN.session);
+    expect(encodeServerMessage(serverFixtures.cursor!)).toBe(GOLDEN.cursor);
   });
 
   it("accepts a patch with and without order", () => {
@@ -154,4 +181,90 @@ describe("protocol", () => {
 
     expect(decoded._tag === "hello" ? decoded.protocolVersion : null).toBe(99);
   });
+
+  it("pins the page tag and field table, additive-only", () => {
+    const failures = additiveViolations(PAGE_BASELINE, PAGE_ADDITIVE, shapes(), []);
+
+    expect(failures).toEqual([]);
+    expect(PROTOCOL_VERSION).toBe(1);
+  });
+
+  it("fails a page field rename and an unlisted additive tag", () => {
+    const renamed = structuredClone(PAGE_ADDITIVE) as unknown as {
+      tags: string[];
+      fields: Record<string, string[]>;
+      optionalFields: Record<string, string[]>;
+      stages: string[];
+    };
+    renamed.fields.cursor = ["_tag", "blockId", "cursorLine", "fraction", "seq"];
+    expect(additiveViolations(PAGE_BASELINE, renamed, shapes(), [])).toHaveLength(1);
+
+    expect(
+      additiveViolations(PAGE_BASELINE, { ...PAGE_ADDITIVE, tags: ["session"] }, shapes(), []),
+    ).toHaveLength(1);
+  });
 });
+
+/** The page baseline before the editor-features plan: four tags, one version. */
+const PAGE_BASELINE = {
+  version: 1,
+  tags: ["ready", "snapshot", "patch", "error"],
+  fields: {
+    ready: ["_tag", "protocolVersion", "title", "fileName"],
+    snapshot: ["_tag", "seq", "title", "blocks"],
+    patch: ["_tag", "seq", "title", "order", "upserts", "removed"],
+    error: ["_tag", "stage", "message"],
+  },
+  optionalFields: {
+    ready: [],
+    snapshot: [],
+    patch: ["order"],
+    error: [],
+  },
+  stages: [],
+} as const;
+
+const PAGE_ADDITIVE = {
+  tags: ["session", "cursor"],
+  fields: {
+    session: [
+      "_tag",
+      "fileName",
+      "title",
+      "showFileName",
+      "width",
+      "fontSize",
+      "markdownCss",
+      "codeCss",
+      "scrollMode",
+      "smoothScroll",
+      "themeMode",
+    ],
+    cursor: ["_tag", "blockId", "line", "fraction", "seq"],
+  },
+  optionalFields: {
+    session: [],
+    cursor: [],
+  },
+  stages: [],
+} as const;
+
+const shapes = (): readonly WireShape[] => {
+  const ast = ServerMessageSchema.ast;
+  if (!SchemaAST.isUnion(ast)) throw new Error("expected a union schema");
+
+  return ast.types.map((member) => {
+    if (!SchemaAST.isObjects(member)) throw new Error("expected an object member");
+    const tagProperty = member.propertySignatures.find((property) => property.name === "_tag");
+    if (tagProperty === undefined) throw new Error("message member has no _tag");
+    if (!SchemaAST.isLiteral(tagProperty.type)) throw new Error("expected a literal tag");
+
+    return {
+      tag: String(tagProperty.type.literal),
+      fields: member.propertySignatures.map((property) => String(property.name)),
+      optionalFields: member.propertySignatures
+        .filter((property) => property.type.context?.isOptional === true)
+        .map((property) => String(property.name)),
+    };
+  });
+};

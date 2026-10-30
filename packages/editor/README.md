@@ -1,7 +1,10 @@
 # Editor adapters
 
 Neovim (`nvim/`) and Vim (`vim/`) start the preview server, send document and
-cursor updates, and open the browser. Both adapters keep the same commands:
+cursor updates, and open the browser. `docs/editor-protocol.md` states every
+member, the start order, the cursor fraction and the health field order;
+`bun run editor:protocol` runs a second adapter written from that document.
+Both adapters keep the same commands:
 
 - `:MarkdownPreview`
 - `:MarkdownPreviewStop`
