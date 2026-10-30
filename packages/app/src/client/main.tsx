@@ -9,6 +9,7 @@ import { readDisplay, toggleLineNumbers, withTheme } from "./display.ts";
 import { pageThemeOf, setPageTheme, toggleColorMode } from "./page-theme.ts";
 import { connectClient } from "./socket.ts";
 import { applyServerMessage, emptyPreviewState } from "./store.ts";
+import { syncThemeSheets } from "./theme-sheets.ts";
 import { useScrollAnchor } from "./scroll.ts";
 import { setPreset } from "./view-presets.ts";
 // The framework layers sit under the app rules; the app variables must still win.
@@ -36,6 +37,11 @@ const Live = () => {
   const [display, setDisplay] = useState(() => booted.display);
   const [slots, setSlots] = useState(() => booted.slots);
   const [view, setView] = useState<View>(() => booted.view);
+
+  // The head owns the two code-theme sheets; React must not re-render them.
+  useEffect(() => {
+    syncThemeSheets(document, display);
+  }, [display]);
 
   const container = useRef<HTMLElement>(null);
   const status = useRef<HTMLParagraphElement>(null);

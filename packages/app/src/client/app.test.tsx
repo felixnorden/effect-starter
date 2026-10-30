@@ -163,17 +163,11 @@ describe("App", () => {
     expect(markup).not.toContain("<b>");
   });
 
-  it("renders two precedence stylesheet links with the default hrefs", () => {
+  it("leaves the code-theme sheets to the head and renders no link", () => {
     const markup = renderToStaticMarkup(<TestApp state={emptyPreviewState} />);
-    const links = markup.match(/<link[^>]*>/gu) ?? [];
 
-    expect(links).toHaveLength(2);
-    expect(markup).toContain('rel="stylesheet"');
-    expect(markup).toContain('data-precedence="mdv-code-theme"');
-    expect(markup).toContain('data-slot="light"');
-    expect(markup).toContain('data-slot="dark"');
-    expect(markup).toContain('href="/theme-sheets/github-light-high-contrast.css"');
-    expect(markup).toContain('href="/theme-sheets/github-dark-high-contrast.css"');
+    // React's hoisted links keep every href they have seen; theme-sheets.ts owns them.
+    expect(markup).not.toContain("<link");
   });
 
   it("renders the five selectors and the two code-slot hooks", () => {

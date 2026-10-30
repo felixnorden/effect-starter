@@ -1,7 +1,6 @@
 import type { RefObject } from "react";
 
 import type { Display, ThemeSlot } from "./display.ts";
-import { sheetUrl } from "./display.ts";
 import type { PageThemeScheme } from "./page-theme.ts";
 import type { PreviewState } from "./store.ts";
 import type { PresetAxis, Presets } from "./view-presets.ts";
@@ -44,19 +43,6 @@ export const App = ({
 
   return (
     <div className="preview-shell">
-      <link
-        data-slot="light"
-        rel="stylesheet"
-        href={sheetUrl(display.light.id)}
-        precedence="mdv-code-theme"
-      />
-      <link
-        data-slot="dark"
-        rel="stylesheet"
-        href={sheetUrl(display.dark.id)}
-        precedence="mdv-code-theme"
-      />
-
       <Bar
         heading={heading}
         fileName={state.title === null || state.fileName === null ? null : state.fileName}
