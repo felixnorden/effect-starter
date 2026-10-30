@@ -14,6 +14,7 @@ import {
 } from "../src/contrast.ts";
 import { PAGE_THEMES } from "../src/client/page-theme.ts";
 import { copyFixture, startPreview } from "../e2e/preview-server.ts";
+import { openPanel } from "./panel.ts";
 
 const MINIMUM = 4.5;
 
@@ -249,8 +250,13 @@ test("samples the composed role colours for one non-default pair", async ({ page
   try {
     await page.goto(server.url);
     await page.waitForSelector(".shiki");
+    await openPanel(page);
     await page.getByRole("button", { name: "Line numbers" }).click();
+
+    // One code-theme select follows the mode, so each slot is chosen in its own mode.
+    await setMode(page, "light");
     await page.selectOption('[data-theme-select="light"]', "light-plus");
+    await setMode(page, "dark");
     await page.selectOption('[data-theme-select="dark"]', "dark-plus");
 
     for (const theme of THEMES) {
