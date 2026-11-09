@@ -4,9 +4,10 @@
 starter. It runs one Effect and prints the result. There is no framework here on
 purpose.
 
-`src/main.ts` is the entrypoint. `tsconfig.json` has no ambient types, no emit,
-and the Effect language service plugin. `effect` and `@effect-starter/core` are
-the only runtime dependencies.
+`src/main.ts` is the entrypoint. `tsconfig.json` extends the root
+`tsconfig.base.json`, which sets no ambient types, no emit, and the Effect
+language service plugin. `effect` and `@effect-starter/core` are the only
+runtime dependencies.
 
 ## Replacing it
 

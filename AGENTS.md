@@ -24,6 +24,9 @@ Do not add npm, pnpm, or a second lockfile.
 - Every package defines `check:types`. The root `lint` and `fmt` commands scan
   every package. `test` runs every package with a `test` script and skips the
   rest; `dev` names the app.
+- TypeScript options and the Effect language service live in the root
+  `tsconfig.base.json`; a package tsconfig adds only `include`. Oxlint has one
+  root `oxlint.config.ts`.
 - Run the tsgo patch at the root only; all packages share one TypeScript binary.
 - `Effect.provide` belongs at the app entrypoint, and only there.
 - `.agents/skills` is gitignored. Run `bun run skills:check`; sync only when it

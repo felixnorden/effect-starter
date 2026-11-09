@@ -10,8 +10,8 @@ the result. There is no framework, server, or build step.
 
 - `src/main.ts` — the program and its `Effect.provide(Greeting.layer)` at the
   entrypoint.
-- `tsconfig.json` — no ambient types, no emit, and the Effect language service
-  plugin.
+- `tsconfig.json` — extends the root `tsconfig.base.json`: no ambient types, no
+  emit, and the Effect language service plugin.
 
 ## Replace it
 

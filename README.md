@@ -80,6 +80,12 @@ records the resolved versions. Bump `effect` with `@effect/vitest`, and
 Effect diagnostics. Run it at the root only; all packages share one TypeScript
 binary.
 
+The root `tsconfig.base.json` holds the compiler options and the Effect language
+service options. Each `packages/*/tsconfig.json` extends it and adds only
+`include`, so a rule or severity change happens in one file. The root
+`oxlint.config.ts` is the same single entry for Oxlint; do not add an Oxlint
+config to a package.
+
 The root `package.json` declares `typescript` so `node_modules/.bin/tsc` exists
 for editors. `packages/app/src/main.ts` disables `strictEffectProvide` because it
 is the entrypoint; do not copy that into library code.
