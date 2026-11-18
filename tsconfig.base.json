@@ -100,7 +100,6 @@
           "preferEffectRecord": "warning",
           "preferEffectString": "warning",
           "preferNamespaceImport": "warning",
-          "preferSchemaOverJson": "warning",
           "preferSchemaTaggedError": "warning",
           "preferSchemaTypeProperty": "warning",
           "preferSucceedSomeOrNone": "warning",
